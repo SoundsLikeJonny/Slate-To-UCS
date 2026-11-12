@@ -218,3 +218,78 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---------------------------------------------------------------------------
+# Slate-To-UCS
+# ---------------------------------------------------------------------------
+
+# Agent platform marker and memory folder
+.abacusai/
+.abacus.donotdelete
+
+# JetBrains
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Rust
+target/
+**/*.rs.bk
+
+# Node / pnpm
+node_modules/
+.pnpm-store/
+apps/desktop/dist/
+packages/contract/gen/
+
+# Tauri
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+
+# Python sidecar
+.venv/
+venv/
+*.egg-info/
+apps/desktop/sidecar/build/
+apps/desktop/sidecar/dist/
+
+# Models and weights: never committed, shipped as release assets
+models/*
+!models/manifest.toml
+*.safetensors
+*.onnx
+*.gguf
+*.pt
+*.pth
+*.bin
+*.tar.gz
+
+# REAPER SDK: fetched at build time, never vendored
+apps/reaper/extension/vendor/
+
+# Build and packaging output
+dist/
+build/
+out/
+*.msi
+*.wixobj
+*.wixpdb
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+
+# Local signing and certificate material
+*.pfx
+*.p12
+*.cer
+*.pem
+*.key
+secrets/
+
+# Test and coverage output
+.coverage
+coverage/
+htmlcov/
+*.profraw
