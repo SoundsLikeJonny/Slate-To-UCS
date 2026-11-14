@@ -9,10 +9,14 @@ import { useEffect, useState } from "react";
 
 import { ErrorBoundary } from "./app/ErrorBoundary.tsx";
 import { AboutPanel } from "./app/About.tsx";
+import { ExportPanel } from "./app/ExportPanel.tsx";
+import { Inspector } from "./app/Inspector.tsx";
+import { QueuePanel } from "./app/Queue.tsx";
 import { SplitPane } from "./app/layout.tsx";
 import { ROUTES, routeHref, routeLabel, useRoute } from "./app/router.tsx";
 import { EngineClient, EngineError } from "./lib/engine.ts";
-import type { Health } from "./lib/schema.ts";
+import { applyOverride, clearOverride, type QueueFilter, type ReviewRow } from "./lib/queue.ts";
+import type { Health, TaxonomyEntry } from "./lib/schema.ts";
 
 /** What the status bar knows about the engine. */
 export type EngineStatus =
@@ -73,12 +77,30 @@ export function StatusBar({ status }: StatusBarProps): React.ReactElement {
 export interface AppProps {
   /** The engine client; omitted in tests that do not want a probe. */
   readonly client?: EngineClient;
+  /** The taxonomy the inspector searches; empty until the engine reports one. */
+  readonly taxonomy?: readonly TaxonomyEntry[];
+}
+
+/** Build a queue row for a dropped file. */
+export function droppedRow(name: string): ReviewRow {
+  return {
+    id: name,
+    fileName: name,
+    transcript: null,
+    prediction: null,
+    override: null,
+    status: "pending",
+    error: null,
+  };
 }
 
 /** The application shell. */
-export function App({ client }: AppProps): React.ReactElement {
+export function App({ client, taxonomy = [] }: AppProps): React.ReactElement {
   const route = useRoute();
   const [status, setStatus] = useState<EngineStatus>({ state: "checking" });
+  const [rows, setRows] = useState<readonly ReviewRow[]>([]);
+  const [filter, setFilter] = useState<QueueFilter>("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (client === undefined) {
@@ -93,6 +115,13 @@ export function App({ client }: AppProps): React.ReactElement {
       cancelled = true;
     };
   }, [client]);
+
+  const selected = rows.find((row) => row.id === selectedId) ?? null;
+
+  /** Replace one row, leaving the rest of the queue untouched. */
+  function replaceRow(next: ReviewRow): void {
+    setRows((current) => current.map((row) => (row.id === next.id ? next : row)));
+  }
 
   return (
     <ErrorBoundary>
@@ -115,16 +144,32 @@ export function App({ client }: AppProps): React.ReactElement {
           {route === "workspace" ? (
             <SplitPane
               main={
-                <section aria-label="Queue">
-                  <p className="placeholder">
-                    Drop recordings here once the queue lands in the next milestone week.
-                  </p>
-                </section>
+                <>
+                  <QueuePanel
+                    rows={rows}
+                    filter={filter}
+                    selectedId={selectedId}
+                    onFilterChange={setFilter}
+                    onSelect={setSelectedId}
+                    onDropFiles={(names) => {
+                      setRows((current) => [...current, ...names.map(droppedRow)]);
+                    }}
+                  />
+                  <ExportPanel rows={rows} onExport={() => undefined} />
+                </>
               }
               side={
-                <section aria-label="Inspector">
-                  <p className="placeholder">Select a row to inspect its prediction.</p>
-                </section>
+                <Inspector
+                  row={selected}
+                  taxonomy={taxonomy}
+                  onOverride={(entry) => {
+                    if (selected !== null) replaceRow(applyOverride(selected, entry));
+                  }}
+                  onClearOverride={() => {
+                    if (selected !== null) replaceRow(clearOverride(selected));
+                  }}
+                  onFilenameChange={() => undefined}
+                />
               }
             />
           ) : route === "about" ? (
