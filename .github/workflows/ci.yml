@@ -100,7 +100,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2022, macos-latest, ubuntu-22.04]
+        include:
+          - os: windows-2022
+            extension: "ON"
+          - os: macos-latest
+            extension: "OFF"
+          - os: ubuntu-22.04
+            extension: "OFF"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -109,7 +115,7 @@ jobs:
       - name: fetch the pinned SDK headers
         run: cargo xtask fetch-reaper-sdk
       - name: configure
-        run: cmake -S apps/reaper/extension -B apps/reaper/extension/build
+        run: cmake -S apps/reaper/extension -B apps/reaper/extension/build -DSLATE_BUILD_EXTENSION=${{ matrix.extension }}
       - name: build
         run: cmake --build apps/reaper/extension/build --config Release
       - name: unit tests

@@ -29,6 +29,21 @@ set(SLATE_SOURCES
   src/undo.cpp
 )
 
+# The loadable extension needs the whole SDK, not just the two headers: on every
+# non-Windows platform `reaper_plugin.h` includes `../WDL/swell/swell.h`, and WDL is not
+# published at a pinnable URL. Windows is therefore the only platform where the shared
+# library is built here; the pure-logic tests below need no SDK at all and run everywhere.
+option(SLATE_BUILD_EXTENSION "Build the loadable extension library" ON)
+
+if(SLATE_BUILD_EXTENSION AND NOT WIN32 AND NOT EXISTS "${SLATE_SDK_DIR}/../WDL/swell/swell.h")
+  message(FATAL_ERROR
+    "reaper_plugin.h includes ../WDL/swell/swell.h on this platform, and WDL is not in "
+    "${SLATE_SDK_DIR}/../WDL.\n"
+    "Either place the full REAPER SDK (which ships WDL) next to the fetched headers, or "
+    "configure with -DSLATE_BUILD_EXTENSION=OFF to build only the unit tests.")
+endif()
+
+if(SLATE_BUILD_EXTENSION)
 add_library(slate_reaper SHARED ${SLATE_SOURCES})
 
 target_include_directories(slate_reaper PRIVATE
@@ -61,6 +76,7 @@ install(TARGETS slate_reaper
   LIBRARY DESTINATION .
   RUNTIME DESTINATION .
 )
+endif()  # SLATE_BUILD_EXTENSION
 
 # The pure-logic tests need no REAPER and no SDK beyond the header types, so they run on
 # every platform in CI.

@@ -347,7 +347,7 @@ one undo step reverts the batch; no frame stall over ~50 ms measured with REAPER
 | item | state |
 |---|---|
 | SDK | done: `cargo xtask fetch-reaper-sdk` downloads both headers at pinned SHA-256 values, refuses a mismatch, writes a licence note, and the directory is gitignored |
-| build | done: `CMakeLists.txt` produces `slate_reaper.dll` on Windows; the Unix branch sets no `lib` prefix so REAPER can load it by name |
+| build | done on Windows: `CMakeLists.txt` produces `slate_reaper.dll`; `SLATE_BUILD_EXTENSION=OFF` builds only the tests, which need no SDK |
 | entry | done: `ReaperPluginEntry` registers `SLATE_CHECK_ENGINE` and `SLATE_OPEN_APP` plus a `hookcommand` hook |
 | threading | done: worker thread owns the socket, lock-free SPSC queue, `timer` callback drains it and records its own duration |
 | launcher | partial: attach is implemented and checks `schema_version`; spawn is deliberately delegated to `slate doctor` rather than reimplemented in C++ |
@@ -361,6 +361,11 @@ Verified locally on Windows with MSVC 14.44: `cmake --build --config Release` ex
 The exit criterion is not met: no real REAPER session has run this, so the 20-item tag, the
 single undo step and the 50 ms stall measurement are unproven. The stall budget is instrumented
 (`API_Slate_LastDrainMs`) but has never been read from a live session.
+
+Only Windows builds the loadable library. On macOS and Linux `reaper_plugin.h` includes
+`../WDL/swell/swell.h`, and WDL is not published at a URL that can be pinned, so those platforms
+build and run the unit tests with `-DSLATE_BUILD_EXTENSION=OFF` instead. A Unix `.so` or `.dylib`
+needs the full SDK placed beside the fetched headers.
 
 ### Week 8 (01-04 → 01-10): scripts
 
