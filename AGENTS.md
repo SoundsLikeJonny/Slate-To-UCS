@@ -1,8 +1,9 @@
 # AGENTS.md
 
 Guidance for AI coding agents (and new contributors) working on **Slate-To-UCS**. Read this before
-changing anything. Human-facing docs: [README.md](README.md) and [docs/PLAN.md](docs/PLAN.md).
-`CONTRIBUTING.md`, `SECURITY.md` and `docs/release/` are planned and land with the phase 1 scaffold.
+changing anything. Human-facing docs: [README.md](README.md), [SECURITY.md](SECURITY.md) and
+[docs/PLAN.md](docs/PLAN.md). `CONTRIBUTING.md` and `docs/release/` are planned and land with the
+phase 1 scaffold.
 
 ## 1. What this project is and why it exists
 
@@ -329,7 +330,6 @@ As of 2026-11-12:
   minimum REAPER version (6.x or 7.x); Windows arm64 in or out; whether `slate` ships in the MSI.
   Rename is recommended for v1.
 - **Not yet created:** `changelog.d/`, `version.toml`, the Cargo and pnpm workspaces, `xtask`,
-  `packages/contract/openapi.yaml`, `.github/workflows/`, `CONTRIBUTING.md`, `SECURITY.md`,
-  `docs/adr/`.
+  `packages/contract/openapi.yaml`, `.github/workflows/`, `CONTRIBUTING.md`, `docs/adr/`.
 - **Untracked and not ignored:** `.idea/`, `.abacusai/`, `docs/`. The first two belong in
   `.gitignore` before the first real commit.
