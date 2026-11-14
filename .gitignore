@@ -14,8 +14,10 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Root-anchored: an unanchored `lib/` also matches source directories such as
+# `apps/desktop/src/lib/`, which silently kept the TypeScript client out of git.
+/lib/
+/lib64/
 parts/
 sdist/
 var/

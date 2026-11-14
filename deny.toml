@@ -9,7 +9,14 @@ all-features = true
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
-ignore = []
+ignore = [
+    # Reached only through the Tauri crate, which is outside the workspace and is
+    # checked by the `desktop shell compiles` job. `proc-macro-error` is unmaintained
+    # (RUSTSEC-2024-0370) but has no known vulnerability, and the fix is upstream: it
+    # arrives when Tauri's build-time dependency tree drops `gtk-rs`'s old `syn 1.x`
+    # path. Reviewed 2026-11-14; re-check when Tauri 3 or a newer `tauri-build` lands.
+    { id = "RUSTSEC-2024-0370", reason = "transitive through tauri-build; no known exploit" },
+]
 
 [licenses]
 allow = [

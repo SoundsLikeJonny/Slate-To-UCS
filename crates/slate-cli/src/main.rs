@@ -16,6 +16,7 @@
 
 mod cmd;
 mod output;
+mod whisper;
 
 use std::process::ExitCode;
 
@@ -42,6 +43,8 @@ pub struct Cli {
 pub enum Command {
     /// Predict a CatID, filename and keywords for one or more descriptions.
     Predict(cmd::predict::PredictArgs),
+    /// Transcribe an audio file to timed text with Whisper.
+    Transcribe(cmd::transcribe::TranscribeArgs),
     /// Report engine, model and integration health.
     Doctor,
 }
@@ -55,6 +58,7 @@ fn main() -> ExitCode {
 fn dispatch(cli: &Cli) -> u8 {
     match &cli.command {
         Command::Predict(args) => cmd::predict::run(args),
+        Command::Transcribe(args) => cmd::transcribe::run(args),
         Command::Doctor => cmd::doctor::run(),
     }
 }
@@ -69,8 +73,39 @@ mod tests {
 
         match cli.command {
             Command::Predict(args) => assert_eq!(args.texts, vec!["door creak".to_string()]),
-            Command::Doctor => panic!("expected predict"),
+            other => panic!("expected predict, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn parses_transcribe_with_a_path() {
+        let cli = Cli::try_parse_from(["slate", "transcribe", "take.wav"]).expect("parsed");
+
+        match cli.command {
+            Command::Transcribe(args) => {
+                assert_eq!(args.path, std::path::PathBuf::from("take.wav"));
+                assert!(!args.json);
+            }
+            other => panic!("expected transcribe, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_transcribe_with_json() {
+        let cli =
+            Cli::try_parse_from(["slate", "transcribe", "take.wav", "--json"]).expect("parsed");
+
+        match cli.command {
+            Command::Transcribe(args) => assert!(args.json),
+            other => panic!("expected transcribe, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn transcribe_requires_a_path() {
+        let err = Cli::try_parse_from(["slate", "transcribe"]).expect_err("rejected");
+
+        assert_eq!(err.kind(), clap::error::ErrorKind::MissingRequiredArgument);
     }
 
     #[test]

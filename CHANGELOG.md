@@ -8,6 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `crates/slate-shell`: the desktop logic that needs no window. `InstanceGuard` takes an
+  advisory OS file lock so a second launch exits instead of opening a second window, and a
+  crashed process cannot leave a stale lock behind. `Sidecar` resolves the bundled `ttucs`
+  onedir tree, reports whether it is installed, and builds spawn options that set
+  `TTUCS_OFFLINE=1` on the child only.
+- `slate-engine`: `SpawnOptions` and `Engine::spawn_with_options`, so a caller can pass an
+  environment to the server without mutating its own process environment. `spawn_with` is now
+  a thin wrapper over it.
+- `apps/desktop/src-tauri`: the Tauri 2 window, its capabilities file and the `health` and
+  `predict` commands. The engine token stays in Rust and never crosses the IPC boundary.
+- `apps/desktop`: the React and TypeScript shell. A two-route hash router, a resizable split
+  pane whose width is remembered per viewport bucket and falls back to memory when the webview
+  refuses `localStorage`, an error boundary whose report strips absolute paths and token-shaped
+  strings, a status bar driven by `/health`, and a token-only theme that avoids CSS the three
+  webviews disagree about.
+- `apps/desktop/src/lib/schema.ts`: zod schemas mirroring the contract, with the integer
+  `schema_version` gate. `apps/desktop/src/lib/engine.ts`: the typed client for all six routes,
+  which validates every response and maps each failure to a `kind` the UI branches on.
+- `just check` now runs `tsc --noEmit` and `just test` runs the UI suite; CI gained a `ui` job
+  that typechecks, tests and builds the app on Node 22 with pnpm 9.12.0.
+- `slate-audio`: RIFF/WAVE, Broadcast Wave and RF64 decoding for integer PCM at 8, 16, 24 and 32
+  bits and IEEE float at 32 and 64 bits, with odd-length chunk padding, `WAVE_FORMAT_EXTENSIBLE`
+  sub-format tags, `ds64` sizes and the `bext` slate fields. Channels downmix to mono and resample
+  to 16 kHz through a Kaiser-windowed sinc kernel whose weights are normalised per output sample.
+  A 16-bit PCM encoder writes the Whisper interchange file.
+- `slate transcribe <file> [--json]`: decodes a recording, prepares 16 kHz mono in a temp file that
+  removes itself, runs Whisper and prints timed segments. Exit codes stay 0, 1 and 2.
+- `crates/slate-audio/tests/fixtures.rs`: round-trips a 48 kHz stereo slate, a 96 kHz/24-bit BWF with
+  a `bext` slate, an RF64 header against its RIFF twin, and a prepared 16 kHz mono file from disk.
 - The M1 scaffold: a Cargo workspace with `slate-ucs`, `slate-engine`, `slate-cli` and `xtask`,
   `version.toml` as the single source of the product version, `rust-toolchain.toml`, `rustfmt.toml`,
   `deny.toml`, `.gitattributes`, a `justfile` with one recipe per task, and a pnpm workspace root
@@ -91,6 +120,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `just changelog X.Y.Z` assembles the release section.
 
 ### Changed
+- The workspace minimum Rust version is 1.89, because `InstanceGuard` uses the stabilised
+  `File::try_lock` rather than a pid file or a third-party lock crate.
 - `docs/PLAN.md` revision 2 supersedes revision 1 on four points, following the owner's decisions
   recorded in the handover brief: the engine is `ttucs serve` (Python standard library
   `ThreadingHTTPServer`) rather than a Rust daemon; the desktop UI is React rather than Svelte; the

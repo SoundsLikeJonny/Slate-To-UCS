@@ -1,0 +1,201 @@
+/*
+ * Tokens only. The three webviews this app runs in (WebView2, WKWebView, WebKitGTK) differ
+ * in their support for newer CSS, so the shell sticks to custom properties, flexbox and
+ * grid, and avoids `:has()`, container queries and subgrid.
+ */
+
+:root {
+  color-scheme: dark light;
+
+  --bg: #14161a;
+  --bg-raised: #1b1e24;
+  --bg-sunken: #101216;
+  --border: #2a2f38;
+  --text: #e6e9ef;
+  --text-muted: #9aa3b2;
+  --accent: #6ea8fe;
+  --accent-contrast: #0b1220;
+
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --danger: #f87171;
+
+  --radius: 6px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f7f8fa;
+    --bg-raised: #ffffff;
+    --bg-sunken: #eceef2;
+    --border: #d5d9e0;
+    --text: #1a1d23;
+    --text-muted: #5b6472;
+    --accent: #1f6feb;
+    --accent-contrast: #ffffff;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+}
+
+.app__title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.app__nav {
+  display: flex;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.app__nav a {
+  color: var(--text-muted);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
+.app__nav a[aria-current="page"] {
+  color: var(--text);
+  background: var(--bg-sunken);
+}
+
+.app__body {
+  flex: 1;
+  min-height: 0;
+}
+
+.split {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.split__main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: var(--space-4);
+}
+
+.split__handle {
+  width: 5px;
+  cursor: col-resize;
+  background: var(--border);
+}
+
+.split__handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.split__side {
+  flex: 0 0 auto;
+  overflow: auto;
+  border-left: 1px solid var(--border);
+  background: var(--bg-raised);
+  padding: var(--space-4);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-4);
+  border-top: 1px solid var(--border);
+  background: var(--bg-raised);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.status__dot--ok {
+  background: var(--ok);
+}
+
+.status__dot--warn {
+  background: var(--warn);
+}
+
+.status__dot--danger {
+  background: var(--danger);
+}
+
+.placeholder {
+  color: var(--text-muted);
+}
+
+.crash {
+  padding: var(--space-6);
+}
+
+.crash__report {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  max-height: 40vh;
+  overflow: auto;
+}
+
+button {
+  font: inherit;
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border: 0;
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-3);
+  margin-right: var(--space-2);
+  cursor: pointer;
+}

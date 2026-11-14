@@ -1,0 +1,20 @@
+[package]
+name = "slate-shell"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "Desktop shell logic: single-instance guard and sidecar supervision"
+
+[dependencies]
+slate-engine = { path = "../slate-engine" }
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

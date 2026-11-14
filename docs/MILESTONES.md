@@ -179,6 +179,34 @@ feedback starts.
 **Exit:** the app opens, shows a healthy engine, and `slate transcribe` produces a transcript with
 timings from a 96 kHz/24-bit BWF file and from an RF64 header.
 
+### Status (2026-11-14)
+
+The Rust half of week 3 landed first, because it needs no Node toolchain:
+
+| item | state |
+|---|---|
+| `slate-audio` decode for WAV/BWF/RF64 | done: PCM 8/16/24/32-bit, float 32/64-bit, extensible tags, `ds64`, `bext` |
+| resample to 16 kHz | done: Kaiser-windowed sinc, normalised per output sample |
+| `fixtures/audio/` round-trip tests | done as `crates/slate-audio/tests/fixtures.rs`, synthesised rather than committed as blobs |
+| `slate transcribe` | done: argument list, JSON parser and spawn are separate and all tested |
+| `fetch-whisper.ps1`, `fetch-model.ps1` | not started; the pinned SHA-256 values have to be taken from a real release |
+| UI skeleton | done: hash router, split pane, error boundary, status bar, token-only theme |
+| `lib/engine.ts`, `lib/schema.ts` | done: typed client for all six routes, zod schemas, `schema_version` gate |
+| Tauri shell, health panel | done: window, capabilities, `health` and `predict` commands, `slate-shell` guard and sidecar supervisor, About panel over `/health` |
+
+Verified locally: `cargo test --workspace` 321 tests, `cargo clippy --workspace --all-targets --
+-D warnings` clean, `cargo fmt --all --check` clean, `cargo check --manifest-path
+apps/desktop/src-tauri/Cargo.toml` clean, `pnpm --dir apps/desktop test` 111 tests, `pnpm --dir
+apps/desktop typecheck` clean, `pnpm --dir apps/desktop build` produces `dist/`, `pytest tools/tests`
+32 passed and 1 skipped. `just check` and `just test` cover both halves. The transcriber has not been run against a real
+Whisper binary or model, and the UI has not been loaded inside a Tauri window, so neither
+end-to-end path is proven.
+
+The Tauri crate is outside the Cargo workspace (ADR-0007), so `cargo test --workspace` does not
+compile it and CI does not catch a mistake in `lib.rs` or `tauri.conf.json`. The testable half —
+the instance guard and the sidecar supervisor — is in `crates/slate-shell` and is covered on all
+three operating systems.
+
 ### Week 4 (12-07 → 12-13): review and export
 
 | goal | detail |

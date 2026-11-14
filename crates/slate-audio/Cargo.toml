@@ -1,0 +1,20 @@
+[package]
+name = "slate-audio"
+description = "WAV, BWF and RF64 decoding plus resampling for the transcription path"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

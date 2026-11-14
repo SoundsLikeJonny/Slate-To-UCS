@@ -29,6 +29,47 @@ pub struct Engine {
     owned: bool,
 }
 
+/// Everything [`Engine::spawn_with_options`] needs to start a server.
+///
+/// The fields are public because the desktop shell builds one from its own
+/// configuration; the type exists so a new spawn argument cannot be added in one
+/// place and forgotten in another.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpawnOptions {
+    /// The executable to run.
+    pub binary: String,
+    /// Where the server writes its endpoint file.
+    pub endpoint_path: PathBuf,
+    /// How long to wait for the endpoint file.
+    pub startup_timeout: Duration,
+    /// How long to wait for the model to warm.
+    pub warm_timeout: Duration,
+    /// Extra environment variables for the child only.
+    pub env: Vec<(String, String)>,
+}
+
+impl SpawnOptions {
+    /// Options for a binary and endpoint file with the default timeouts and no
+    /// extra environment.
+    #[must_use]
+    pub fn new(binary: impl Into<String>, endpoint_path: impl Into<PathBuf>) -> Self {
+        Self {
+            binary: binary.into(),
+            endpoint_path: endpoint_path.into(),
+            startup_timeout: STARTUP_TIMEOUT,
+            warm_timeout: WARM_TIMEOUT,
+            env: Vec::new(),
+        }
+    }
+
+    /// Add one environment variable for the child process.
+    #[must_use]
+    pub fn with_env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.env.push((key.into(), value.into()));
+        self
+    }
+}
+
 impl Engine {
     /// Attach to a running server, if there is one.
     ///
@@ -97,9 +138,30 @@ impl Engine {
         startup_timeout: Duration,
         warm_timeout: Duration,
     ) -> Result<Self, EngineError> {
+        Self::spawn_with_options(&SpawnOptions {
+            binary: binary.to_string(),
+            endpoint_path: endpoint_path.to_path_buf(),
+            startup_timeout,
+            warm_timeout,
+            env: Vec::new(),
+        })
+    }
+
+    /// Start a server with an explicit environment.
+    ///
+    /// The desktop shell needs this to pass `TTUCS_OFFLINE=1` to the sidecar without
+    /// mutating its own process environment, which would leak into every other thread.
+    ///
+    /// # Errors
+    ///
+    /// As [`Engine::spawn`].
+    pub fn spawn_with_options(options: &SpawnOptions) -> Result<Self, EngineError> {
+        let binary = options.binary.as_str();
+        let endpoint_path = options.endpoint_path.as_path();
         Endpoint::clear_at(endpoint_path)?;
 
-        let mut child = Command::new(binary)
+        let mut command = Command::new(binary);
+        command
             .arg("serve")
             .arg("--port")
             .arg("0")
@@ -107,11 +169,15 @@ impl Engine {
             .arg(endpoint_path)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stderr(Stdio::null());
+        for (key, value) in &options.env {
+            command.env(key, value);
+        }
+        let mut child = command
             .spawn()
             .map_err(|e| EngineError::NotInstalled(format!("{binary}: {e}")))?;
 
-        let endpoint = match wait_for_endpoint(endpoint_path, startup_timeout) {
+        let endpoint = match wait_for_endpoint(endpoint_path, options.startup_timeout) {
             Ok(endpoint) => endpoint,
             Err(e) => {
                 let _ = child.kill();
@@ -121,7 +187,7 @@ impl Engine {
         check_schema_version(endpoint.schema_version)?;
 
         let client = Client::new(endpoint);
-        match wait_for_warm(&client, warm_timeout) {
+        match wait_for_warm(&client, options.warm_timeout) {
             Ok(()) => Ok(Self {
                 client,
                 owned: true,
@@ -314,5 +380,97 @@ mod tests {
             None => std::env::remove_var("TTUCS_HOME"),
         }
         assert!(engine.expect("no error").is_none());
+    }
+
+    #[test]
+    fn spawn_options_default_to_the_shared_timeouts() {
+        let options = SpawnOptions::new("ttucs", Path::new("/tmp/serve.json"));
+
+        assert_eq!(options.binary, "ttucs");
+        assert_eq!(options.endpoint_path, Path::new("/tmp/serve.json"));
+        assert_eq!(options.startup_timeout, STARTUP_TIMEOUT);
+        assert_eq!(options.warm_timeout, WARM_TIMEOUT);
+        assert!(options.env.is_empty());
+    }
+
+    #[test]
+    fn spawn_options_collect_environment_in_order() {
+        let options = SpawnOptions::new("ttucs", Path::new("/tmp/serve.json"))
+            .with_env("TTUCS_OFFLINE", "1")
+            .with_env("TTUCS_HOME", "/tmp/home");
+
+        assert_eq!(
+            options.env,
+            vec![
+                ("TTUCS_OFFLINE".to_string(), "1".to_string()),
+                ("TTUCS_HOME".to_string(), "/tmp/home".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn spawn_options_are_comparable() {
+        let one = SpawnOptions::new("ttucs", Path::new("/tmp/a.json"));
+        let two = SpawnOptions::new("ttucs", Path::new("/tmp/a.json"));
+        let three = SpawnOptions::new("ttucs", Path::new("/tmp/b.json"));
+
+        assert_eq!(one, two);
+        assert_ne!(one, three);
+    }
+
+    #[test]
+    fn spawn_with_options_reports_a_missing_binary() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let options = SpawnOptions::new(
+            "definitely-not-a-real-binary-xyz",
+            dir.path().join("serve.json"),
+        );
+
+        let err = Engine::spawn_with_options(&options).expect_err("missing binary");
+
+        assert!(matches!(err, EngineError::NotInstalled(_)), "got {err:?}");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn spawn_with_options_passes_the_environment_to_the_child() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = dir.path().join("serve.json");
+        let script = dir.path().join("fake-serve.sh");
+        std::fs::write(
+            &script,
+            "#!/bin/sh\nprintf '%s' \"$TTUCS_OFFLINE\" > \"$SLATE_PROBE\"\n",
+        )
+        .expect("write script");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&script).expect("stat").permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&script, perms).expect("chmod");
+        }
+        let probe = dir.path().join("probe.txt");
+
+        let mut options = SpawnOptions::new(script.to_string_lossy().to_string(), &path)
+            .with_env("TTUCS_OFFLINE", "1")
+            .with_env("SLATE_PROBE", probe.to_string_lossy().to_string());
+        options.startup_timeout = Duration::from_millis(400);
+        options.warm_timeout = Duration::from_millis(200);
+
+        let err = Engine::spawn_with_options(&options).expect_err("no endpoint file");
+
+        assert!(matches!(err, EngineError::StartupTimeout(_)), "got {err:?}");
+        // The parent gives up after 400 ms; on a loaded runner the child may not have been
+        // scheduled yet, so wait for its write instead of assuming it already happened.
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        let mut contents = String::new();
+        while std::time::Instant::now() < deadline {
+            if let Ok(text) = std::fs::read_to_string(&probe) {
+                contents = text;
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        assert_eq!(contents, "1", "the child did not see TTUCS_OFFLINE");
     }
 }
