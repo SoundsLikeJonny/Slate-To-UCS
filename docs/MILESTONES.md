@@ -221,6 +221,25 @@ three operating systems.
 **Exit:** 200 real files dropped, transcribed, predicted, reviewed and exported. With the network
 disabled and `TTUCS_OFFLINE=1`, a proxy log or firewall rule shows **zero outbound connections**.
 
+### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| queue | done: drop zone, virtualised table with an overscan window, sorted by confidence ascending with a total order, six filter chips that count themselves |
+| batch | predict batches of 32 done in `lib/queue.ts`; per-file transcribe progress and cancel are not wired to a running transcriber |
+| inspector | done: transcript, ranked alternatives, decision badge, editable file name with live validation, keywords |
+| override | done: ranked `/taxonomy/search` over the loaded taxonomy, arrow keys and Enter, row marked `overridden`, original guess kept on the prediction |
+| export | done: RFC 4180 CSV and JSONL over a fixed column set, with the column preview above the buttons |
+| VAD | not started: neither Silero ONNX nor the energy fallback exists yet |
+
+Verified locally: `pnpm --dir apps/desktop test` 296 tests, `pnpm --dir apps/desktop typecheck`
+clean, `pnpm --dir apps/desktop build` produces `dist/` at 333.19 kB, `just check` and `just test`
+both exit 0 over the Rust and UI halves.
+
+The exit criterion is not met: no 200-file run has happened, because there is no transcriber behind
+`slate transcribe` and no engine endpoint wired into the window. The zero-outbound-connection check
+therefore has nothing to observe yet.
+
 ### Risks
 
 - STT quality will dominate perceived accuracy. If transcripts are poor on real slates, raise the
