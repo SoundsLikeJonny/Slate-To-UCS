@@ -269,6 +269,7 @@ models/*
 
 # REAPER SDK: fetched at build time, never vendored
 apps/reaper/extension/vendor/
+apps/reaper/extension/build/
 
 # Build and packaging output
 dist/

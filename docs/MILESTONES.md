@@ -342,6 +342,26 @@ Phases 5 and 6. The milestone that makes the product worth having for a recordis
 **Exit:** 20 selected items tagged in a real session; notes correct and pre-existing text preserved;
 one undo step reverts the batch; no frame stall over ~50 ms measured with REAPER's own timer.
 
+#### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| SDK | done: `cargo xtask fetch-reaper-sdk` downloads both headers at pinned SHA-256 values, refuses a mismatch, writes a licence note, and the directory is gitignored |
+| build | done: `CMakeLists.txt` produces `slate_reaper.dll` on Windows; the Unix branch sets no `lib` prefix so REAPER can load it by name |
+| entry | done: `ReaperPluginEntry` registers `SLATE_CHECK_ENGINE` and `SLATE_OPEN_APP` plus a `hookcommand` hook |
+| threading | done: worker thread owns the socket, lock-free SPSC queue, `timer` callback drains it and records its own duration |
+| launcher | partial: attach is implemented and checks `schema_version`; spawn is deliberately delegated to `slate doctor` rather than reimplemented in C++ |
+| actions | partial: check engine and open app are wired; tag selected, tag project and render pattern are not |
+| writes | partial: `merge_notes` and `UndoBlock` are implemented and tested; the item-write path that calls them is not |
+| failure | done: every failure path reports through the console and returns, never throwing into the host |
+
+Verified locally on Windows with MSVC 14.44: `cmake --build --config Release` exit 0,
+`slate_reaper.dll` 78,336 bytes, `slate_reaper_tests` 69 checks with 0 failures, `ctest` 1/1 passed.
+
+The exit criterion is not met: no real REAPER session has run this, so the 20-item tag, the
+single undo step and the 50 ms stall measurement are unproven. The stall budget is instrumented
+(`API_Slate_LastDrainMs`) but has never been read from a live session.
+
 ### Week 8 (01-04 → 01-10): scripts
 
 | goal | detail |

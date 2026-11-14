@@ -40,6 +40,14 @@ check-changelog:
 check-shell:
     cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 
+# The extension needs the SDK headers and cmake, so it is a separate recipe rather than
+# part of `check`: a contributor without either can still run everything else.
+check-reaper:
+    cargo xtask fetch-reaper-sdk
+    cmake -S apps/reaper/extension -B apps/reaper/extension/build
+    cmake --build apps/reaper/extension/build --config Release
+    ctest --test-dir apps/reaper/extension/build --output-on-failure -C Release
+
 # ---------------------------------------------------------------- tests
 
 test:
