@@ -121,6 +121,28 @@ jobs:
       - name: unit tests
         run: ctest --test-dir apps/reaper/extension/build --output-on-failure -C Release
 
+  scripts:
+    name: reaper scripts (lua)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: install lua 5.4
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lua5.4
+      - name: unit tests
+        run: lua5.4 apps/reaper/scripts/tests/slate_api_test.lua
+      - name: the index template has no unfilled placeholder but the two the workflow fills
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, sys
+          text = pathlib.Path("apps/reaper/scripts/index.xml.tmpl").read_text(encoding="utf-8")
+          found = sorted(set(re.findall(r"\{\{[A-Z_]+\}\}", text)))
+          print("placeholders:", found)
+          if found != ["{{BASE_URL}}", "{{VERSION}}"]:
+              sys.exit("the template has an unexpected placeholder set")
+          PY
+
   golden:
     name: golden corpus is current
     runs-on: ubuntu-22.04

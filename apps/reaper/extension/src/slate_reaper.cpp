@@ -200,6 +200,68 @@ double API_Slate_LastDrainMs() { return g_last_drain_ms.load(std::memory_order_a
 // The schema version this extension speaks.
 int API_Slate_SchemaVersion() { return kSchemaVersion; }
 
+// Predict one description and return the JSON array of predictions.
+//
+// Returns nullptr on failure and writes the reason to the console. The pointer is valid
+// until the next call on the same thread, which is what REAPER's Lua binding needs: it
+// copies the string immediately, so a caller never holds it across a call.
+//
+// This blocks the calling thread for the duration of one HTTP round trip. A script that
+// calls it in a loop over a large project should call it from a deferral rather than a
+// tight loop, because REAPER's main thread is what stalls.
+const char* API_Slate_Predict(const char* description, int top_k) {
+  static thread_local std::string buffer;
+
+  if (description == nullptr || *description == '\0') {
+    show_console("Slate-To-UCS: a description is required\n");
+    return nullptr;
+  }
+  const int limit = top_k > 0 ? top_k : 3;
+
+  std::string error;
+  Endpoint endpoint;
+  if (connect_or_spawn(&endpoint, &error) != LaunchStep::Attach) {
+    show_console("Slate-To-UCS: " + error + "\n");
+    return nullptr;
+  }
+
+  std::string response;
+  const std::string body = predict_body({description}, limit);
+  if (!http_post(endpoint, "/predict", body, &response, &error)) {
+    show_console("Slate-To-UCS: " + error + "\n");
+    return nullptr;
+  }
+
+  std::vector<Prediction> predictions;
+  if (!parse_predictions(response, &predictions, &error)) {
+    show_console("Slate-To-UCS: " + error + "\n");
+    return nullptr;
+  }
+
+  buffer = "[";
+  for (std::size_t i = 0; i < predictions.size(); ++i) {
+    const Prediction& prediction = predictions[i];
+    if (i != 0) {
+      buffer += ",";
+    }
+    buffer += "{\"cat_id\":\"" + json_escape(prediction.cat_id) + "\"";
+    buffer += ",\"confidence\":" + std::to_string(prediction.confidence);
+    buffer += ",\"decision\":\"" + json_escape(prediction.decision) + "\"";
+    buffer += ",\"filename\":\"" + json_escape(prediction.filename) + "\"";
+    buffer += ",\"fx_name\":\"" + json_escape(prediction.fx_name) + "\"";
+    buffer += ",\"keywords\":[";
+    for (std::size_t k = 0; k < prediction.keywords.size(); ++k) {
+      if (k != 0) {
+        buffer += ",";
+      }
+      buffer += "\"" + json_escape(prediction.keywords[k]) + "\"";
+    }
+    buffer += "]}";
+  }
+  buffer += "]";
+  return buffer.c_str();
+}
+
 }  // extern "C"
 
 // ---------------------------------------------------------------- entry

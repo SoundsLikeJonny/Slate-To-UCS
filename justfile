@@ -55,6 +55,17 @@ test-reaper:
     cmake --build apps/reaper/extension/build --config Release
     ctest --test-dir apps/reaper/extension/build --output-on-failure -C Release
 
+# The Lua scripts are tested without REAPER, so this needs only a Lua 5.4 interpreter.
+test-scripts:
+    lua apps/reaper/scripts/tests/slate_api_test.lua
+
+# Install or remove the scripts in REAPER's resource directory, reversibly.
+reaper-install:
+    cargo xtask reaper-install
+
+reaper-uninstall:
+    cargo xtask reaper-install --uninstall
+
 # ---------------------------------------------------------------- tests
 
 test:

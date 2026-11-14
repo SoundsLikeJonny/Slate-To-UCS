@@ -13,6 +13,7 @@ mod changelog;
 mod docs_check;
 mod fetch_reaper_sdk;
 mod gen_golden;
+mod reaper_install;
 mod sync_taxonomy;
 mod verify_versions;
 
@@ -44,6 +45,7 @@ fn main() -> ExitCode {
         "gen-golden" => gen_golden::run(rest),
         "sync-taxonomy" => sync_taxonomy::run(rest),
         "fetch-reaper-sdk" => fetch_reaper_sdk::run(rest),
+        "reaper-install" => reaper_install::run(rest),
         "coverage" => run_tool(
             "cargo",
             &["llvm-cov", "--workspace", "--fail-under-lines", "85"],
@@ -85,6 +87,8 @@ fn usage() -> String {
         "  gen-golden [--check]  regenerate or verify the conformance corpus",
         "  sync-taxonomy         refresh the bundled UCS CSV and its pinned hash",
         "  fetch-reaper-sdk      download the pinned REAPER extension headers",
+        "  reaper-install [--resource-dir DIR] [--portable DIR] [--uninstall]",
+        "                        install or remove the REAPER scripts, reversibly",
         "  coverage              cargo llvm-cov with the enforced floor",
         "  fuzz                  60 s fuzz smoke on the WAV parser",
     ]
@@ -125,6 +129,7 @@ mod tests {
             "gen-golden",
             "sync-taxonomy",
             "fetch-reaper-sdk",
+            "reaper-install",
             "coverage",
             "fuzz",
         ] {
