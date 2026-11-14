@@ -16,13 +16,16 @@ setup:
 
 # ---------------------------------------------------------------- checks
 
-check: check-fmt check-clippy check-docs check-versions check-changelog
+check: check-fmt check-clippy check-docs check-versions check-changelog check-ui
 
 check-fmt:
     cargo fmt --all --check
 
 check-clippy:
     cargo clippy --workspace --all-targets -- -D warnings
+
+check-ui:
+    pnpm --dir apps/desktop typecheck
 
 check-docs:
     cargo xtask docs-check
@@ -37,9 +40,13 @@ check-changelog:
 
 test:
     cargo test --workspace
+    pnpm --dir apps/desktop test
 
 test-unit:
     cargo test --workspace --lib
+
+test-ui:
+    pnpm --dir apps/desktop test
 
 coverage:
     cargo xtask coverage

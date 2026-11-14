@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `apps/desktop`: the React and TypeScript shell. A two-route hash router, a resizable split
+  pane whose width is remembered per viewport bucket and falls back to memory when the webview
+  refuses `localStorage`, an error boundary whose report strips absolute paths and token-shaped
+  strings, a status bar driven by `/health`, and a token-only theme that avoids CSS the three
+  webviews disagree about.
+- `apps/desktop/src/lib/schema.ts`: zod schemas mirroring the contract, with the integer
+  `schema_version` gate. `apps/desktop/src/lib/engine.ts`: the typed client for all six routes,
+  which validates every response and maps each failure to a `kind` the UI branches on.
+- `just check` now runs `tsc --noEmit` and `just test` runs the UI suite; CI gained a `ui` job
+  that typechecks, tests and builds the app on Node 22 with pnpm 9.12.0.
 - `slate-audio`: RIFF/WAVE, Broadcast Wave and RF64 decoding for integer PCM at 8, 16, 24 and 32
   bits and IEEE float at 32 and 64 bits, with odd-length chunk padding, `WAVE_FORMAT_EXTENSIBLE`
   sub-format tags, `ds64` sizes and the `bext` slate fields. Channels downmix to mono and resample

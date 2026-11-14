@@ -190,11 +190,16 @@ The Rust half of week 3 landed first, because it needs no Node toolchain:
 | `fixtures/audio/` round-trip tests | done as `crates/slate-audio/tests/fixtures.rs`, synthesised rather than committed as blobs |
 | `slate transcribe` | done: argument list, JSON parser and spawn are separate and all tested |
 | `fetch-whisper.ps1`, `fetch-model.ps1` | not started; the pinned SHA-256 values have to be taken from a real release |
-| Tauri shell, UI skeleton, health panel | not started; Node 26.13.1 and pnpm 9.12.0 are now installed on the development machine |
+| UI skeleton | done: hash router, split pane, error boundary, status bar, token-only theme |
+| `lib/engine.ts`, `lib/schema.ts` | done: typed client for all six routes, zod schemas, `schema_version` gate |
+| Tauri shell, health panel | not started; Node 26.13.1 and pnpm 9.12.0 are installed on the development machine |
 
 Verified locally: `cargo test --workspace` 296 tests, `cargo clippy --workspace --all-targets --
--D warnings` clean, `cargo fmt --all --check` clean, coverage 89.08% lines. The transcriber has not
-been run against a real Whisper binary or model, so the end-to-end transcript is unproven.
+-D warnings` clean, `cargo fmt --all --check` clean, coverage 89.08% lines, `pnpm --dir
+apps/desktop test` 95 tests, `pnpm --dir apps/desktop typecheck` clean, `pnpm --dir apps/desktop
+build` produces `dist/`. `just check` and `just test` now cover both halves. The transcriber has not
+been run against a real Whisper binary or model, and the UI has not been loaded inside a Tauri
+window, so neither end-to-end path is proven.
 
 ### Week 4 (12-07 → 12-13): review and export
 
