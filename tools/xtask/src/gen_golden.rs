@@ -37,7 +37,12 @@ pub fn run_in(root: &Path, check: bool) -> Result<(), String> {
     if status.success() {
         Ok(())
     } else {
-        Err("golden corpus generation failed".to_string())
+        Err(format!(
+            "golden corpus generation failed with {}",
+            status
+                .code()
+                .map_or_else(|| "a signal".to_string(), |c| format!("exit code {c}"))
+        ))
     }
 }
 
@@ -52,6 +57,18 @@ mod tests {
         let err = run_in(dir.path(), true).expect_err("missing script");
 
         assert!(err.contains("gen_golden.py"), "got {err}");
+    }
+
+    #[test]
+    fn a_refused_reference_reports_its_exit_code() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let tools = dir.path().join("tools");
+        std::fs::create_dir(&tools).expect("tools dir");
+        std::fs::write(tools.join("gen_golden.py"), "raise SystemExit(3)\n").expect("script");
+
+        let err = run_in(dir.path(), true).expect_err("non-zero exit");
+
+        assert!(err.contains("exit code 3"), "got {err}");
     }
 
     #[test]

@@ -26,7 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `packages/contract/openapi.yaml`: the build-time contract for all six routes, with the runtime
   gate remaining the integer `schema_version` (ADR-0004).
 - `fixtures/golden/predictions.jsonl`: 412 rows generated from the pinned `ttucs` over the dev and
-  realistic description sets, plus `tools/gen_golden.py` to regenerate or verify it.
+  realistic description sets, plus `tools/gen_golden.py` to regenerate or verify it. The script pins
+  the released wheel (`ttucs==0.3.0`), refuses an editable checkout, and reports the first differing
+  row when the corpus is stale.
 - `crates/slate-ucs/tests/conformance.rs` asserts the Rust port matches the reference on `fx_name`,
   `keywords`, `filename` and CatID resolution, and that every golden filename round-trips.
 - `crates/slate-ucs/tests/properties.rs`: six property tests over sanitising, filename round-trip,
