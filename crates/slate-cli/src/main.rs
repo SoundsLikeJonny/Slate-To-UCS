@@ -45,6 +45,8 @@ pub enum Command {
     Predict(cmd::predict::PredictArgs),
     /// Transcribe an audio file to timed text with Whisper.
     Transcribe(cmd::transcribe::TranscribeArgs),
+    /// Plan, apply or undo renames of slate files.
+    Tag(cmd::tag::TagArgs),
     /// Report engine, model and integration health.
     Doctor,
 }
@@ -59,6 +61,7 @@ fn dispatch(cli: &Cli) -> u8 {
     match &cli.command {
         Command::Predict(args) => cmd::predict::run(args),
         Command::Transcribe(args) => cmd::transcribe::run(args),
+        Command::Tag(args) => cmd::tag::run(args),
         Command::Doctor => cmd::doctor::run(),
     }
 }

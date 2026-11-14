@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `crates/slate-tagger`: rename planning, journalling and undo. `plan_renames` refuses an
+  overwrite, a duplicate source, two entries claiming one name, a name with a forbidden
+  character, a reserved Windows device name, a trailing space or dot, an over-long name and a
+  subfolder unless the caller opts in. `apply` writes the journal before the first rename and
+  rewrites it after each one, so a crash leaves a journal listing exactly what moved. `undo`
+  replays it in reverse and counts an entry whose file is already back as already restored, so
+  running it twice is safe.
+- `slate tag <dir> --names <plan.jsonl> [--apply] [--undo <journal>] [--json]`: a dry run by
+  default, exit 1 when any entry is blocked. The journal records an absolute directory, so an
+  undo works from any working directory.
 - `crates/slate-shell`: the desktop logic that needs no window. `InstanceGuard` takes an
   advisory OS file lock so a second launch exits instead of opening a second window, and a
   crashed process cannot leave a stale lock behind. `Sidecar` resolves the bundled `ttucs`

@@ -260,6 +260,24 @@ test asserts no transcript, filename, path or CatID appears in any field.
 **Exit:** a dry run on a copy of a real folder, then apply, then undo, leaves every filename
 byte-identical to the start and no leftover temp files.
 
+### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| dry run | done: two-column old → new, with `skip` and a sentence per blocked entry; exit 1 when anything is blocked |
+| safety | done: never overwrites, refuses subfolders unless `allow_subfolders`, refuses `..`, single atomic rename per file |
+| journal | done: `slate-undo-<timestamp>.json`, written before the first rename and rewritten after each one, absolute directory, version gate on read |
+| undo | done: reverse order, byte-identical restore, idempotent, refuses when the original name is occupied |
+| CLI | done: `slate tag <dir> --names <plan> [--apply] [--undo <journal>] [--json]` |
+
+Verified locally: `cargo test --workspace` 293 tests plus doctests, `cargo clippy --workspace
+--all-targets -- -D warnings` clean, `cargo fmt --all --check` clean. A smoke run on a scratch
+folder renamed two files, journalled both, then restored them with `sha256sum -c` passing.
+
+The desired names come from a plan file, not from the engine: `slate tag` does not yet predict a
+name from a transcript, so the CLI is proven but the end-to-end path from audio to renamed file is
+not. Week 5 (transcript editor, cancellation, keyboard, settings, telemetry) is not started.
+
 ### Risks
 
 - This is the only destructive feature in the product. If undo is not proven, rename does not ship
