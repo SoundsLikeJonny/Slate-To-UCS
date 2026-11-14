@@ -247,6 +247,24 @@ match.
 **Exit:** editing a transcript re-predicts in under 200 ms on a 200-row queue; the telemetry payload
 test asserts no transcript, filename, path or CatID appears in any field.
 
+#### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| re-predict | done: `rePredictChanged` sends one request for the changed rows in batches of 32; a test asserts one request and under 200 ms on a 200-row queue |
+| cancellation | done: `slate_audio::Cancellable` kills and reaps on drop; tests assert the process is reaped, that a second cancel is harmless, and that a dropped handle kills the child before it can write its marker file |
+| keyboard | done: `keyboard.ts` binding table and resolver, with a test that the table covers every action and that a text field wins over every binding except the export chord |
+| settings | done: `settings.ts` with per-field validation, defaults, unknown-key tolerance and round-trip persistence |
+| telemetry | done: allowlisted payload, `containsUserData` leak check, `DO_NOT_TRACK` and `SLATE_TELEMETRY` precedence, "what is sent" field list |
+| transcript editor UI | not started: the modules are in place, the panel is not |
+
+Verified locally: `cargo test --workspace` 367 tests plus doctests, `cargo clippy --workspace
+--all-targets -- -D warnings` clean, `cargo fmt --all --check` clean, `pnpm --dir apps/desktop test`
+235 tests, `pnpm --dir apps/desktop typecheck` clean.
+
+The 200 ms figure is measured against a stub client, so it proves the request count and the
+scheduling, not the engine's latency. The real number needs a warm engine on the owner's machine.
+
 ### Week 6 (12-21 → 12-27): rename
 
 | goal | detail |
@@ -259,6 +277,24 @@ test asserts no transcript, filename, path or CatID appears in any field.
 
 **Exit:** a dry run on a copy of a real folder, then apply, then undo, leaves every filename
 byte-identical to the start and no leftover temp files.
+
+### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| dry run | done: two-column old → new, with `skip` and a sentence per blocked entry; exit 1 when anything is blocked |
+| safety | done: never overwrites, refuses subfolders unless `allow_subfolders`, refuses `..`, single atomic rename per file |
+| journal | done: `slate-undo-<timestamp>.json`, written before the first rename and rewritten after each one, absolute directory, version gate on read |
+| undo | done: reverse order, byte-identical restore, idempotent, refuses when the original name is occupied |
+| CLI | done: `slate tag <dir> --names <plan> [--apply] [--undo <journal>] [--json]` |
+
+Verified locally: `cargo test --workspace` 293 tests plus doctests, `cargo clippy --workspace
+--all-targets -- -D warnings` clean, `cargo fmt --all --check` clean. A smoke run on a scratch
+folder renamed two files, journalled both, then restored them with `sha256sum -c` passing.
+
+The desired names come from a plan file, not from the engine: `slate tag` does not yet predict a
+name from a transcript, so the CLI is proven but the end-to-end path from audio to renamed file is
+not. Week 5 (transcript editor, cancellation, keyboard, settings, telemetry) is not started.
 
 ### Risks
 

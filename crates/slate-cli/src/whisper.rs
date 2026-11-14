@@ -178,12 +178,8 @@ pub fn parse_json(bytes: &[u8]) -> Result<Transcript, TranscribeError> {
 /// As [`transcribe_with`].
 pub fn transcribe(config: &WhisperConfig, wav: &Path) -> Result<Transcript, TranscribeError> {
     transcribe_with(config, wav, |binary, arguments| {
-        std::process::Command::new(binary)
-            .args(arguments)
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
+        let mut child = slate_audio::Cancellable::spawn(binary, arguments)?;
+        child.wait()
     })
 }
 
