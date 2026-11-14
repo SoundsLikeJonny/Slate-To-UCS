@@ -122,6 +122,23 @@ PowerShell with `TTUCS_OFFLINE=1` and an empty `TTUCS_HOME`.
 `slate predict "<a full slate>"` returns a `Prediction` matching the golden corpus. Contract drift
 check active and failing on a deliberate edit.
 
+### Status (2026-11-14)
+
+The scaffold landed ahead of the window, in one PR. Verified on Windows only:
+
+| check | result |
+|---|---|
+| `cargo test --workspace` | 181 tests pass |
+| `cargo fmt --all --check` | clean |
+| `cargo clippy --workspace --all-targets -- -D warnings` | clean |
+| `cargo xtask verify-versions` / `docs-check` / `changelog --check` | pass |
+| `cargo xtask gen-golden --check` | 412 rows, current |
+
+Still open against the exit criterion: the three-OS CI matrix has not run, `just` is not installed
+on the development machine so the `just check && just test` path is unexercised, and `slate predict`
+has not been driven against a live `ttucs serve`. The contract drift check is wired into `ci.yml`
+but has not been observed failing on a deliberate edit.
+
 ### Risks
 
 - `slate-ucs` conformance is the first place the Rust port can silently diverge. If it does not

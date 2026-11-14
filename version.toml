@@ -1,0 +1,6 @@
+# Single source of the product version.
+#
+# `cargo xtask bump X.Y.Z` writes this value into every manifest and
+# `cargo xtask verify-versions` fails if any of them disagree. Never edit the
+# other manifests by hand.
+version = "0.1.0"

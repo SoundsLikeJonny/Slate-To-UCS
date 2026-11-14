@@ -8,6 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- The M1 scaffold: a Cargo workspace with `slate-ucs`, `slate-engine`, `slate-cli` and `xtask`,
+  `version.toml` as the single source of the product version, `rust-toolchain.toml`, `rustfmt.toml`,
+  `deny.toml`, `.gitattributes`, a `justfile` with one recipe per task, and a pnpm workspace root
+  for the desktop app that lands in M2.
+- `slate-ucs`: a port of `ttucs.taxonomy` and `ttucs.text`. The UCS list is compiled in with a
+  pinned SHA-256, CatID resolution handles the two known aliases and `CATEGORY-SUBCATEGORY`, and
+  the filename builder implements `CatID(-UserCategory)_(VendorCategory-)FXName_CreatorID_SourceID
+  (_UserData)` with sanitising, round-trip parsing and an extension splitter.
+- `slate-engine`: the reference implementation of the three launcher steps, endpoint discovery
+  through `$TTUCS_HOME/serve.json`, a `Token` type whose `Debug` and `Display` both print
+  `<redacted>`, the `schema_version` gate, typed wire types, and a minimal in-tree HTTP/1.1 client
+  (ADR-0006) so the core install carries no TLS stack.
+- `slate-cli`: `slate predict` and `slate doctor`, with documented exit codes 0, 1, 2 and 3.
+- `xtask`: `bump`, `verify-versions`, `changelog --check` and `--release`, `docs-check`,
+  `gen-golden`, `sync-taxonomy`, `coverage` and `fuzz`.
+- `packages/contract/openapi.yaml`: the build-time contract for all six routes, with the runtime
+  gate remaining the integer `schema_version` (ADR-0004).
+- `fixtures/golden/predictions.jsonl`: 412 rows generated from the pinned `ttucs` over the dev and
+  realistic description sets, plus `tools/gen_golden.py` to regenerate or verify it.
+- `crates/slate-ucs/tests/conformance.rs` asserts the Rust port matches the reference on `fx_name`,
+  `keywords`, `filename` and CatID resolution, and that every golden filename round-trips.
+- `crates/slate-ucs/tests/properties.rs`: six property tests over sanitising, filename round-trip,
+  FX-name budgeting and tokenising.
+- CI: `ci.yml` with a three-OS Rust matrix, a coverage floor job, version and changelog gates, a
+  documentation link check, a golden-corpus drift check and `cargo deny`; `nightly.yml` with
+  mutation testing and a fuzz smoke; `docs.yml` building mdBook to Pages.
+- `CONTRIBUTING.md`, `CODEOWNERS`, `docs/index.md`, `docs/book.toml`, `changelog.d/README.md` and
+  ADRs 0001 to 0006.
 - `docs/PLAN.md`: the build plan for the product family — Slate-To-UCS Desktop, the REAPER
   extension and the REAPER scripts — over one engine and one contract. Covers the process model,
   the `ttucs serve` contract and launcher steps, the repository layout, technology choices with

@@ -1,0 +1,10 @@
+# Review routing. The owner reviews everything until a second maintainer exists.
+
+* @SoundsLikeJonny
+
+/crates/            @SoundsLikeJonny
+/apps/desktop/      @SoundsLikeJonny
+/apps/reaper/       @SoundsLikeJonny
+/packages/contract/ @SoundsLikeJonny
+/.github/           @SoundsLikeJonny
+/SECURITY.md        @SoundsLikeJonny

@@ -1,0 +1,25 @@
+[package]
+name = "slate-cli"
+description = "The slate command line interface"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "slate"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+serde_json = { workspace = true }
+slate-engine = { path = "../slate-engine" }
+slate-ucs = { path = "../slate-ucs" }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true
