@@ -88,7 +88,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: install ttucs
-        run: pip install "ttucs>=0.3,<0.4"
+        run: pip install "ttucs>=0.3,<0.4" pytest
+      - name: tool tests
+        run: python -m pytest tools/tests -q
       - name: regenerate and compare
         run: python tools/gen_golden.py --check
 

@@ -28,9 +28,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT = REPO_ROOT / "fixtures" / "golden" / "predictions.jsonl"
+# The inputs are vendored so the corpus can be regenerated and checked without a
+# sibling `ttucs` checkout. They are byte-identical copies of
+# `ttucs/examples/dev_descriptions.jsonl` and `ttucs/examples/realistic_slates.jsonl`
+# at the pinned version; `--sources` points at a live checkout when one is available.
 DEFAULT_SOURCES = (
-    REPO_ROOT.parent / "ttucs" / "examples" / "dev_descriptions.jsonl",
-    REPO_ROOT.parent / "ttucs" / "examples" / "realistic_slates.jsonl",
+    REPO_ROOT / "fixtures" / "golden" / "sources" / "dev_descriptions.jsonl",
+    REPO_ROOT / "fixtures" / "golden" / "sources" / "realistic_slates.jsonl",
 )
 
 
@@ -50,6 +54,14 @@ def _read_descriptions(path: Path) -> list[str]:
                 out.append(text)
         else:
             out.append(line)
+    return out
+
+
+def collect_descriptions(sources: tuple[Path, ...] | list[Path]) -> list[str]:
+    """Read every description from ``sources``, in order."""
+    out: list[str] = []
+    for source in sources:
+        out.extend(_read_descriptions(Path(source)))
     return out
 
 
@@ -90,11 +102,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--check", action="store_true", help="fail if the output differs")
     parser.add_argument("--limit", type=int, default=0, help="cap the number of rows")
+    parser.add_argument(
+        "--sources",
+        type=Path,
+        nargs="+",
+        default=list(DEFAULT_SOURCES),
+        help="description files to read instead of the vendored copies",
+    )
     args = parser.parse_args(argv)
 
-    descriptions: list[str] = []
-    for source in DEFAULT_SOURCES:
-        descriptions.extend(_read_descriptions(source))
+    descriptions = collect_descriptions(args.sources)
     if args.limit:
         descriptions = descriptions[: args.limit]
     if not descriptions:
