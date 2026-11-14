@@ -128,11 +128,14 @@ The scaffold landed ahead of the window, in one PR. Verified on Windows only:
 
 | check | result |
 |---|---|
-| `cargo test --workspace` | 181 tests pass |
+| `cargo test --workspace` | 197 tests pass |
 | `cargo fmt --all --check` | clean |
 | `cargo clippy --workspace --all-targets -- -D warnings` | clean |
 | `cargo xtask verify-versions` / `docs-check` / `changelog --check` | pass |
 | `cargo xtask gen-golden --check` | 412 rows, current |
+| `cargo llvm-cov --workspace --fail-under-lines 85` | 86.03% lines |
+| `cargo deny check` | advisories, bans, licences and sources ok |
+| `python -m pytest tools/tests` | 11 tests pass |
 
 Still open against the exit criterion: the three-OS CI matrix has not run, `just` is not installed
 on the development machine so the `just check && just test` path is unexercised, and `slate predict`

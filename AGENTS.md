@@ -358,7 +358,7 @@ As of 2026-11-14:
   `package.json` and `pnpm-workspace.yaml`; `packages/contract/openapi.yaml`; ADRs 0001–0006;
   `docs/index.md` and `docs/book.toml`; `CONTRIBUTING.md`, `CODEOWNERS`, `changelog.d/`; and the
   `ci.yml`, `nightly.yml` and `docs.yml` workflows. Verified locally on Windows 2026-11-14:
-  `cargo test --workspace` passes 181 tests, `cargo fmt --all --check` and
+  `cargo test --workspace` passes 197 tests, `cargo fmt --all --check` and
   `cargo clippy --workspace --all-targets -- -D warnings` are clean, and `cargo xtask
   verify-versions`, `docs-check` and `changelog --check` all pass. The three-OS CI matrix has not
   run yet.
