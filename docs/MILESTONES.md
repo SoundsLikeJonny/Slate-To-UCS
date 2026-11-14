@@ -75,6 +75,10 @@ bite later: an unignored `.idea/` and an undocumented contract.
 `git status` is clean apart from ignored paths; the docs PR is open; the `ttucs` PR is open and CI
 is green on it.
 
+**Met 2026-11-14.** PRs #1, #2 and #3 merged; `ttucs` PR #14 merged as `0cee598` and verified live
+(28 serve tests pass; `/health`, `/predict`, `/parse`, `/taxonomy/*`, 401, 413 and `/shutdown` all
+behave as specified with `TTUCS_OFFLINE=1` and an empty `TTUCS_HOME`).
+
 ### Risks
 
 - The `ttucs` PR is larger than it looks: it touches `cli.py`, adds a module, adds tests and changes
@@ -314,8 +318,8 @@ Update the status column at each Sunday check. `not started` / `in progress` / `
 
 | # | milestone | status | exit criterion met | notes |
 |---|---|---|---|---|
-| M0 | Groundwork | in progress | no | docs written, not committed; `ttucs` PR not open |
-| M1 | Contract | not started | no | blocked on M0 |
+| M0 | Groundwork | done | yes | docs, `SECURITY.md`, `CODE_STYLE.md` and `.gitignore` merged in #1, #2 and #3; phase 0 verified 2026-11-14 (28 serve tests pass, live round-trip clean) |
+| M1 | Contract | in progress | no | phase 0 landed in `ttucs` PR #14; scaffold is the remaining work |
 | M2 | First light | not started | no | blocked on M1 |
 | M3 | Trustworthy | not started | no | blocked on M2 |
 | M4 | In the DAW | not started | no | blocked on M3 and the SDK licence review |

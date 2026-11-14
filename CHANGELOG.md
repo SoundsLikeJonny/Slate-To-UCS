@@ -40,6 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at the first signed release, the `signtool` and `codesign` verification commands, the SmartScreen
   reputation caveat, the telemetry allowlist restated as a security boundary, dependency and supply
   chain controls, and a 90-day coordinated disclosure policy with safe harbour.
+- `docs/CODE_STYLE.md`: the per-language standard, made binding by `AGENTS.md` rule 13. Covers what
+  a comment must contain (module header, public API doc, why-comment, `// SAFETY:`, issue-linked
+  TODO) and must never be (commented-out code, restatement, banner art, attribution), then naming
+  and idiom tables for Rust, TypeScript and React, C++, Lua and Python, plus data and configuration
+  files. Fixes the domain vocabulary (`cat_id`, `CatID`, `bext`, `iXML`, the three `decision`
+  values) so code, JSON, docs and UI copy agree. Closes with the enforcement table: every check a
+  tool can make is a blocking CI gate, and only naming and comment quality are left to review.
 - `CHANGELOG.md`: this file, following Keep a Changelog 1.1.0 with `## [Unreleased]` at the top and
   compare links at the bottom. Entries are written directly under `[Unreleased]` until the
   `changelog.d/` fragment tooling lands, after which every PR adds a fragment and
