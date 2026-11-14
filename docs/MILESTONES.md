@@ -179,6 +179,23 @@ feedback starts.
 **Exit:** the app opens, shows a healthy engine, and `slate transcribe` produces a transcript with
 timings from a 96 kHz/24-bit BWF file and from an RF64 header.
 
+### Status (2026-11-14)
+
+The Rust half of week 3 landed first, because it needs no Node toolchain:
+
+| item | state |
+|---|---|
+| `slate-audio` decode for WAV/BWF/RF64 | done: PCM 8/16/24/32-bit, float 32/64-bit, extensible tags, `ds64`, `bext` |
+| resample to 16 kHz | done: Kaiser-windowed sinc, normalised per output sample |
+| `fixtures/audio/` round-trip tests | done as `crates/slate-audio/tests/fixtures.rs`, synthesised rather than committed as blobs |
+| `slate transcribe` | done: argument list, JSON parser and spawn are separate and all tested |
+| `fetch-whisper.ps1`, `fetch-model.ps1` | not started; the pinned SHA-256 values have to be taken from a real release |
+| Tauri shell, UI skeleton, health panel | not started; Node 26.13.1 and pnpm 9.12.0 are now installed on the development machine |
+
+Verified locally: `cargo test --workspace` 296 tests, `cargo clippy --workspace --all-targets --
+-D warnings` clean, `cargo fmt --all --check` clean, coverage 89.08% lines. The transcriber has not
+been run against a real Whisper binary or model, so the end-to-end transcript is unproven.
+
 ### Week 4 (12-07 → 12-13): review and export
 
 | goal | detail |

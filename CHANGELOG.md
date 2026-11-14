@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `slate-audio`: RIFF/WAVE, Broadcast Wave and RF64 decoding for integer PCM at 8, 16, 24 and 32
+  bits and IEEE float at 32 and 64 bits, with odd-length chunk padding, `WAVE_FORMAT_EXTENSIBLE`
+  sub-format tags, `ds64` sizes and the `bext` slate fields. Channels downmix to mono and resample
+  to 16 kHz through a Kaiser-windowed sinc kernel whose weights are normalised per output sample.
+  A 16-bit PCM encoder writes the Whisper interchange file.
+- `slate transcribe <file> [--json]`: decodes a recording, prepares 16 kHz mono in a temp file that
+  removes itself, runs Whisper and prints timed segments. Exit codes stay 0, 1 and 2.
+- `crates/slate-audio/tests/fixtures.rs`: round-trips a 48 kHz stereo slate, a 96 kHz/24-bit BWF with
+  a `bext` slate, an RF64 header against its RIFF twin, and a prepared 16 kHz mono file from disk.
 - The M1 scaffold: a Cargo workspace with `slate-ucs`, `slate-engine`, `slate-cli` and `xtask`,
   `version.toml` as the single source of the product version, `rust-toolchain.toml`, `rustfmt.toml`,
   `deny.toml`, `.gitattributes`, a `justfile` with one recipe per task, and a pnpm workspace root
