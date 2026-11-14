@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per-week goal table, an exit criterion that is either met or not, and its own risks. Also records
   the capacity assumptions, five decision deadlines with defaults if unanswered, the weekly cadence,
   six slip triggers and a status table updated at each Sunday check.
+- `SECURITY.md`: the security policy. Private reporting through GitHub advisories with response
+  targets, a supported-version table, an in-scope and out-of-scope list, the threat model with its
+  five boundaries and what is explicitly not defended against, download verification by checksum,
+  Sigstore bundle and build provenance, the Authenticode PKI chain with the fingerprints published
+  at the first signed release, the `signtool` and `codesign` verification commands, the SmartScreen
+  reputation caveat, the telemetry allowlist restated as a security boundary, dependency and supply
+  chain controls, and a 90-day coordinated disclosure policy with safe harbour.
 - `CHANGELOG.md`: this file, following Keep a Changelog 1.1.0 with `## [Unreleased]` at the top and
   compare links at the bottom. Entries are written directly under `[Unreleased]` until the
   `changelog.d/` fragment tooling lands, after which every PR adds a fragment and
