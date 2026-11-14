@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/slate-audio",
     "crates/slate-ucs",
     "crates/slate-engine",
     "crates/slate-cli",

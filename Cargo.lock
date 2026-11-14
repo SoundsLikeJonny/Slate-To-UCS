@@ -596,14 +596,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "slate-audio"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "slate-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
  "serde_json",
+ "slate-audio",
  "slate-engine",
  "slate-ucs",
  "tempfile",
+ "thiserror",
 ]
 
 [[package]]
