@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 
 import { ErrorBoundary } from "./app/ErrorBoundary.tsx";
+import { AboutPanel } from "./app/About.tsx";
 import { SplitPane } from "./app/layout.tsx";
 import { ROUTES, routeHref, routeLabel, useRoute } from "./app/router.tsx";
 import { EngineClient, EngineError } from "./lib/engine.ts";
@@ -125,6 +126,11 @@ export function App({ client }: AppProps): React.ReactElement {
                   <p className="placeholder">Select a row to inspect its prediction.</p>
                 </section>
               }
+            />
+          ) : route === "about" ? (
+            <AboutPanel
+              health={status.state === "healthy" ? status.health : undefined}
+              reason={status.state === "unavailable" ? status.reason : undefined}
             />
           ) : (
             <section aria-label="Settings" style={{ padding: "var(--space-4)" }}>

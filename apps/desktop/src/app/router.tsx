@@ -8,15 +8,17 @@
 import { useSyncExternalStore } from "react";
 
 /** The screens the shell can show. */
-export type Route = "workspace" | "settings";
+export type Route = "workspace" | "settings" | "about";
 
 /** Every route, in navigation order. */
-export const ROUTES: readonly Route[] = ["workspace", "settings"];
+export const ROUTES: readonly Route[] = ["workspace", "settings", "about"];
 
 /** The route a hash points at, defaulting to the workspace. */
 export function parseRoute(hash: string): Route {
   const trimmed = hash.replace(/^#\/?/, "").replace(/\/+$/, "");
-  return trimmed === "settings" ? "settings" : "workspace";
+  if (trimmed === "settings") return "settings";
+  if (trimmed === "about") return "about";
+  return "workspace";
 }
 
 /** The hash that selects a route. */
@@ -26,7 +28,14 @@ export function routeHref(route: Route): string {
 
 /** The label shown in the navigation. */
 export function routeLabel(route: Route): string {
-  return route === "settings" ? "Settings" : "Workspace";
+  switch (route) {
+    case "settings":
+      return "Settings";
+    case "about":
+      return "About";
+    case "workspace":
+      return "Workspace";
+  }
 }
 
 function subscribe(onChange: () => void): () => void {

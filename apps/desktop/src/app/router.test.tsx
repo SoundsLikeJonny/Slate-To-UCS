@@ -16,6 +16,12 @@ describe("parseRoute", () => {
     expect(parseRoute("#/settings/")).toBe("settings");
   });
 
+  it("reads the about route", () => {
+    expect(parseRoute("#/about")).toBe("about");
+    expect(parseRoute("#about")).toBe("about");
+    expect(parseRoute("#/about/")).toBe("about");
+  });
+
   it("falls back to the workspace for an unknown route", () => {
     expect(parseRoute("#/nope")).toBe("workspace");
   });
@@ -35,13 +41,21 @@ describe("routeHref", () => {
   it("produces a hash-prefixed path", () => {
     expect(routeHref("workspace")).toBe("#/workspace");
     expect(routeHref("settings")).toBe("#/settings");
+    expect(routeHref("about")).toBe("#/about");
   });
 });
 
 describe("routeLabel", () => {
-  it("names both routes", () => {
+  it("names every route", () => {
     expect(routeLabel("workspace")).toBe("Workspace");
     expect(routeLabel("settings")).toBe("Settings");
+    expect(routeLabel("about")).toBe("About");
+  });
+
+  it("labels every route in ROUTES", () => {
+    for (const route of ROUTES) {
+      expect(routeLabel(route).length).toBeGreaterThan(0);
+    }
   });
 });
 

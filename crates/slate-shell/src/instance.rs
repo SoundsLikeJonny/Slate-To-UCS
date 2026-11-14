@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 pub struct InstanceGuard {
     path: PathBuf,
     file: File,
+    held: bool,
 }
 
 impl InstanceGuard {
@@ -39,7 +40,11 @@ impl InstanceGuard {
             .truncate(false)
             .open(&path)?;
         match file.try_lock() {
-            Ok(()) => Ok(Some(Self { path, file })),
+            Ok(()) => Ok(Some(Self {
+                path,
+                file,
+                held: true,
+            })),
             Err(std::fs::TryLockError::WouldBlock) => Ok(None),
             Err(std::fs::TryLockError::Error(e)) => Err(e),
         }
@@ -53,17 +58,25 @@ impl InstanceGuard {
 
     /// Whether this guard still holds the lock.
     ///
-    /// Always true for a live guard; exposed so a caller can assert the invariant in a
-    /// test without reaching into the file handle.
+    /// This reads a flag rather than re-locking the handle. Probing with `try_lock` is
+    /// not portable: `flock` on a descriptor that already holds the lock succeeds, so on
+    /// Unix a live guard would report itself as unheld. The flag is set on acquire and
+    /// cleared by [`InstanceGuard::release`], which is the only way the lock is dropped.
     #[must_use]
     pub fn is_held(&self) -> bool {
-        self.file.try_lock().is_err()
+        self.held
+    }
+
+    /// Drop the lock and mark the guard released.
+    fn release(&mut self) {
+        self.held = false;
+        let _ = self.file.unlock();
     }
 }
 
 impl Drop for InstanceGuard {
     fn drop(&mut self) {
-        let _ = self.file.unlock();
+        self.release();
     }
 }
 
@@ -83,6 +96,33 @@ mod tests {
         assert_eq!(guard.path(), path);
         assert!(guard.is_held());
         assert!(path.is_file());
+    }
+
+    #[test]
+    fn releasing_clears_the_held_flag() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = dir.path().join("instance.lock");
+        let mut guard = InstanceGuard::acquire(&path)
+            .expect("acquire")
+            .expect("held");
+
+        guard.release();
+
+        assert!(!guard.is_held(), "a released guard must not claim the lock");
+    }
+
+    #[test]
+    fn releasing_twice_is_harmless() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = dir.path().join("instance.lock");
+        let mut guard = InstanceGuard::acquire(&path)
+            .expect("acquire")
+            .expect("held");
+
+        guard.release();
+        guard.release();
+
+        assert!(!guard.is_held());
     }
 
     #[test]

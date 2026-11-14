@@ -460,6 +460,17 @@ mod tests {
         let err = Engine::spawn_with_options(&options).expect_err("no endpoint file");
 
         assert!(matches!(err, EngineError::StartupTimeout(_)), "got {err:?}");
-        assert_eq!(std::fs::read_to_string(&probe).expect("probe"), "1");
+        // The parent gives up after 400 ms; on a loaded runner the child may not have been
+        // scheduled yet, so wait for its write instead of assuming it already happened.
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        let mut contents = String::new();
+        while std::time::Instant::now() < deadline {
+            if let Ok(text) = std::fs::read_to_string(&probe) {
+                contents = text;
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        assert_eq!(contents, "1", "the child did not see TTUCS_OFFLINE");
     }
 }
