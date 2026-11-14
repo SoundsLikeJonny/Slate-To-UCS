@@ -722,12 +722,17 @@ out in our release notes because it changes what our clients receive.
 |---|---|---|
 | Windows x64 | `windows-2022` | `.msi`, `.exe` (NSIS), `slate.exe`, `slate_reaper.dll` |
 | Windows arm64 | `windows-2022` cross | `.msi`, `.exe` (phase 8) |
-| macOS arm64 | `macos-14` | `.dmg`, `slate`, `slate_reaper.dylib` |
-| macOS x64 | `macos-13` | `.dmg`, `slate`, `slate_reaper.dylib` |
+| macOS arm64 | `macos-latest` | `.dmg`, `slate`, `slate_reaper.dylib` |
+| macOS x64 | `macos-15-intel` | `.dmg`, `slate`, `slate_reaper.dylib` |
 | Linux x64 | `ubuntu-22.04` | `.deb`, `.rpm`, `.AppImage`, `slate`, `slate_reaper.so` |
 
 `ubuntu-22.04`, not `-latest`: it pins glibc 2.35 so the binary runs on Debian 12, Ubuntu 22.04+
 and current Fedora. Building on 24.04 silently raises the floor.
+
+`macos-15-intel`, not `macos-13`: GitHub retired the macOS 13 and macOS 14 images
+(macOS 14 retired 2026-11-02, `actions/runner-images#15226`), so `macos-13` no longer
+resolves to a runner. The x64 labels still published are `macos-15-intel`,
+`macos-26-intel`, `macos-latest-large` and `macos-26-large`; `macos-latest` is arm64.
 
 ### 13.3 Merge gates
 

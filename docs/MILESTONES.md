@@ -115,12 +115,42 @@ PowerShell with `TTUCS_OFFLINE=1` and an empty `TTUCS_HOME`.
 | contract | `packages/contract/openapi.yaml` plus `gen/ts` and `gen/rust`, with the drift check wired into CI |
 | first crates | `slate-ucs` with `tests/conformance.rs` against `fixtures/golden/predictions.jsonl`; `slate-engine` with `endpoint.rs`, `launcher.rs`, `client.rs` |
 | CLI | `slate predict` and `slate doctor` over a real `ttucs serve` |
-| CI | `ci.yml` on `windows-2022`, `macos-14`, `ubuntu-22.04`; `nightly.yml`; `docs.yml` |
+| CI | `ci.yml` on `windows-2022`, `macos-latest`, `ubuntu-22.04`; `nightly.yml`; `docs.yml` |
 | docs | `CONTRIBUTING.md`, `CODEOWNERS`, `docs/index.md`, ADRs 0001–0006 |
 
 **Exit:** from a clean checkout on all three OSes, `just check && just test` passes and
 `slate predict "<a full slate>"` returns a `Prediction` matching the golden corpus. Contract drift
 check active and failing on a deliberate edit.
+
+### Status (2026-11-14)
+
+The scaffold landed ahead of the window, in one PR. Verified on Windows and in CI:
+
+| check | result |
+|---|---|
+| `cargo test --workspace` | 198 tests pass |
+| `cargo fmt --all --check` | clean |
+| `cargo clippy --workspace --all-targets -- -D warnings` | clean |
+| `cargo xtask verify-versions` / `docs-check` / `changelog --check` | pass |
+| `cargo xtask gen-golden --check` | 412 rows, current |
+| `cargo llvm-cov --workspace --fail-under-lines 85` | 86.44% lines |
+| `cargo deny check` | advisories, bans, licences and sources ok |
+| `python -m pytest tools/tests` | 19 tests pass against the pinned wheel |
+| `just check` / `just test` / `just test-unit` / `just coverage` | all exit 0; coverage 86.44% lines |
+| `slate predict` against a live `ttucs serve` | exit 0, correct predictions, server shut down and endpoint file removed |
+| CI `43563767951` on `2f9c6ab` | all eight jobs pass: rust on `windows-2022`, `macos-latest`, `ubuntu-22.04`, coverage, versions, docs, golden, supply chain |
+
+The golden corpus is pinned to the released `ttucs==0.3.0` wheel, not to a working checkout. It was
+first generated from an editable checkout that tracks `main`, which disagreed with the wheel on 35 of
+412 rows; `tools/gen_golden.py` now refuses an editable reference and CI installs the exact version.
+
+The live run used `SLATE_TTUCS_BIN` pointing at the `ttucs` virtualenv executable and a scratch
+`TTUCS_HOME`, so `slate predict` spawned the server itself, read `serve.json`, predicted, and shut the
+server down. No `ttucs.exe` was left running and the endpoint file was removed.
+
+Every exit item is now met. The contract drift check is wired into `ci.yml` and was observed failing
+on a deliberate edit locally: changing one CatID in row 4 of the corpus made
+`cargo xtask gen-golden --check` exit 1 and print that row with both versions.
 
 ### Risks
 

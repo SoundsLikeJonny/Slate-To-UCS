@@ -1,0 +1,16 @@
+[book]
+title = "Slate-To-UCS"
+description = "Turn the slates from your recordings into UCS filenames and metadata"
+src = "."
+language = "en"
+authors = ["Jon Evans"]
+
+[build]
+build-dir = "book"
+create-missing = false
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/SoundsLikeJonny/Slate-To-UCS"
+edit-url-template = "https://github.com/SoundsLikeJonny/Slate-To-UCS/edit/main/docs/{path}"

@@ -223,6 +223,13 @@ Rust port of `ttucs.text` and `ttucs.taxonomy`.
   `decision` for every row.
 - CI regenerates the corpus against the pinned `ttucs` and fails on drift, so an upstream change that
   alters filenames is caught before release rather than after.
+- The corpus is pinned to the **released** `ttucs` wheel (`PINNED_TTUCS_VERSION` in
+  `tools/gen_golden.py`, `ttucs==0.3.0` in `ci.yml`), never to a working checkout. An editable
+  `ttucs` install tracks `main` and is normally ahead of the tag, so its parser output differs from
+  the wheel; `tools/gen_golden.py` refuses an editable reference unless `--allow-editable` is passed,
+  and the corpus test skips with that reason. Regenerate in a clean virtualenv.
+- A stale corpus is reported with the first differing row, both versions side by side, so a CI log
+  says what moved rather than only that something did.
 - The realistic slates are used here **only** as an equality fixture. They are the held-out set and
   are never used to tune a threshold, a default or a UI string.
 

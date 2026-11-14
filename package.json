@@ -1,0 +1,20 @@
+{
+  "name": "slate-to-ucs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Turn the slates from your recordings into UCS filenames and metadata",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SoundsLikeJonny/Slate-To-UCS.git"
+  },
+  "scripts": {
+    "check": "just check",
+    "test": "just test",
+    "build": "just build"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20"
+  }
+}

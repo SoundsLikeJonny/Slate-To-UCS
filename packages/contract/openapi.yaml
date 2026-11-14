@@ -1,0 +1,399 @@
+openapi: 3.1.0
+info:
+  title: ttucs serve
+  version: "1.0.0"
+  description: |
+    The loopback HTTP contract between `ttucs serve` and its clients.
+
+    This document is the build-time contract: TypeScript and Rust clients are generated from it and
+    CI fails on drift. The runtime gate is the integer `schema_version` carried in every response
+    envelope and in `/health`; a client refuses a version it does not implement.
+
+    The server binds `127.0.0.1` only, sends no CORS headers, and requires `X-Ttucs-Token` on every
+    route except `/health`.
+servers:
+  - url: http://127.0.0.1:{port}
+    variables:
+      port:
+        default: "8731"
+security:
+  - token: []
+paths:
+  /health:
+    get:
+      summary: Liveness, model identity and request caps
+      security: []
+      responses:
+        "200":
+          description: The server is up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /predict:
+    post:
+      summary: Classify one or more descriptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PredictRequest"
+      responses:
+        "200":
+          description: One prediction per input, always a list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [schema_version, predictions]
+                properties:
+                  schema_version:
+                    type: integer
+                  predictions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Prediction"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+        "413":
+          $ref: "#/components/responses/TooLarge"
+  /parse:
+    post:
+      summary: Parse slate fields without running the classifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParseRequest"
+      responses:
+        "200":
+          description: One slate per input
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [schema_version, slates]
+                properties:
+                  schema_version:
+                    type: integer
+                  slates:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SlateFields"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+  /taxonomy/search:
+    get:
+      summary: Substring search over the UCS list
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Ranked entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [schema_version, entries]
+                properties:
+                  schema_version:
+                    type: integer
+                  entries:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TaxonomyEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+  /taxonomy/{cat_id}:
+    get:
+      summary: One taxonomy entry
+      parameters:
+        - name: cat_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The entry
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [schema_version, entry]
+                properties:
+                  schema_version:
+                    type: integer
+                  entry:
+                    $ref: "#/components/schemas/TaxonomyEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+        "404":
+          description: Unknown CatID
+  /shutdown:
+    post:
+      summary: Stop the server
+      responses:
+        "200":
+          description: The server is stopping
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [schema_version, ok]
+                properties:
+                  schema_version:
+                    type: integer
+                  ok:
+                    type: boolean
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+components:
+  securitySchemes:
+    token:
+      type: apiKey
+      in: header
+      name: X-Ttucs-Token
+  responses:
+    BadRequest:
+      description: Bad JSON, missing or empty texts, or an out-of-range value
+    Unauthorised:
+      description: Missing or wrong token
+    TooLarge:
+      description: Body over 1 MiB, or more than 512 texts
+  schemas:
+    PredictRequest:
+      type: object
+      required: [texts]
+      properties:
+        texts:
+          type: array
+          minItems: 1
+          maxItems: 512
+          items:
+            type: string
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 50
+        creator_id:
+          type: string
+        source_id:
+          type: string
+    ParseRequest:
+      type: object
+      required: [texts]
+      properties:
+        texts:
+          type: array
+          minItems: 1
+          maxItems: 512
+          items:
+            type: string
+    Health:
+      type: object
+      required:
+        [schema_version, status, warm, ttucs_version, ucs_version, model, offline,
+         unknown_threshold, category_threshold]
+      properties:
+        schema_version:
+          type: integer
+        status:
+          type: string
+          enum: [ok]
+        warm:
+          type: boolean
+        ttucs_version:
+          type: string
+        ucs_version:
+          type: string
+        model:
+          $ref: "#/components/schemas/ModelInfo"
+        offline:
+          type: boolean
+        device:
+          type: string
+        unknown_threshold:
+          type: number
+        category_threshold:
+          type: number
+        top_k:
+          type: integer
+        limits:
+          $ref: "#/components/schemas/Limits"
+    ModelInfo:
+      type: object
+      required: [name, version]
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        source:
+          type: string
+        manifest_verified:
+          type: boolean
+        manifest_error:
+          type: [string, "null"]
+        path:
+          type: [string, "null"]
+    Limits:
+      type: object
+      properties:
+        max_texts:
+          type: integer
+        max_body_bytes:
+          type: integer
+        max_top_k:
+          type: integer
+    Prediction:
+      type: object
+      required:
+        [cat_id, category, subcategory, cat_short, category_full, confidence, decision, filename]
+      properties:
+        text:
+          type: string
+        description:
+          type: string
+        cat_id:
+          type: string
+        category:
+          type: string
+        subcategory:
+          type: string
+        cat_short:
+          type: string
+        category_full:
+          type: string
+        confidence:
+          type: number
+        category_confidence:
+          type: number
+        decision:
+          type: string
+          enum: [confident, category_fallback, unknown]
+        alternatives:
+          type: array
+          items:
+            $ref: "#/components/schemas/Alternative"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryScore"
+        fx_name:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        filename:
+          type: string
+        is_unknown:
+          type: boolean
+        slate:
+          $ref: "#/components/schemas/SlateFields"
+    Alternative:
+      type: object
+      required: [cat_id, category, subcategory, cat_short, confidence]
+      properties:
+        cat_id:
+          type: string
+        category:
+          type: string
+        subcategory:
+          type: string
+        cat_short:
+          type: string
+        confidence:
+          type: number
+    CategoryScore:
+      type: object
+      required: [category, confidence]
+      properties:
+        category:
+          type: string
+        confidence:
+          type: number
+    SlateFields:
+      type: object
+      properties:
+        raw_text:
+          type: string
+        description:
+          type: string
+        project:
+          type: [string, "null"]
+        location:
+          type: [string, "null"]
+        microphones:
+          type: array
+          items:
+            type: string
+        mic_types:
+          type: array
+          items:
+            type: string
+        mic_setup:
+          type: array
+          items:
+            type: string
+        recorder:
+          type: [string, "null"]
+        sample_rate:
+          type: [integer, "null"]
+        bit_depth:
+          type: [string, "null"]
+        take:
+          type: [string, "null"]
+        scene:
+          type: [string, "null"]
+        slate:
+          type: [string, "null"]
+        perspective:
+          type: array
+          items:
+            type: string
+        date:
+          type: [string, "null"]
+        creator:
+          type: [string, "null"]
+        notes:
+          type: [string, "null"]
+        unparsed:
+          type: array
+          items:
+            type: string
+    TaxonomyEntry:
+      type: object
+      required: [cat_id, category, subcategory, cat_short]
+      properties:
+        cat_id:
+          type: string
+        category:
+          type: string
+        subcategory:
+          type: string
+        cat_short:
+          type: string
+        explanation:
+          type: string
