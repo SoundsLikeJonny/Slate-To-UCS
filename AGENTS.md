@@ -77,6 +77,21 @@ No surface owns inference.
     marked **Breaking:** in the changelog.
 12. **The REAPER SDK is fetched, never vendored.** `xtask fetch-reaper-sdk` pulls a pinned version
     into a gitignored directory with its licence file. It must never enter `ttucs` either.
+13. **Code style is [docs/CODE_STYLE.md](docs/CODE_STYLE.md), and it is binding.** Per-language
+    naming, doc comments, comment content and formatting are specified there. Anything a formatter
+    or linter can decide is not a review comment. Public API gets a doc comment; a comment explains
+    why, never what. No commented-out code, no banner art, no attribution comments. SDK symbols keep
+    their exact spelling and are wrapped in adapters.
+14. **Tests are [docs/TESTING.md](docs/TESTING.md), and it is binding.** Every `pub` function, every
+    error variant, every branch and every boundary gets a test. A bug fix ships with the test that
+    would have caught it. Tests are deterministic: no network, no wall clock, no fixed port, no
+    unseeded randomness, no `sleep` to fix a race, no retries to green. Coverage floors are enforced
+    per crate. A conformance failure is never fixed by loosening the assertion.
+15. **Assertions are for invariants, not error handling.** `debug_assert!` in Rust for internal
+    invariants, `invariant()` in TypeScript, `assert()` in C++ only where `NDEBUG` cannot strip
+    something needed, `assert` in Lua for argument validation, and never `assert` in Python
+    production code because `python -O` removes it. Every assertion message names the invariant and
+    the values, and no assertion has a side effect.
 
 ## 3. How it works (high level)
 
@@ -182,6 +197,9 @@ The engine is not in this repo. Until `ttucs serve` lands, point the app at a lo
 | task | command |
 |---|---|
 | lint and test (must pass before any PR) | `just check` then `just test` |
+| unit suite only, fast | `just test-unit` |
+| coverage with the enforced floors | `just coverage` |
+| fuzz smoke, 60 s per parser | `just fuzz` |
 | build release binaries for the host | `just build` |
 | build MSI/NSIS/DMG/deb for the host | `just bundle` |
 | bump the product version everywhere | `just bump X.Y.Z` |
@@ -191,7 +209,10 @@ The engine is not in this repo. Until `ttucs serve` lands, point the app at a lo
 | fetch the pinned REAPER SDK | `cargo xtask fetch-reaper-sdk` |
 | regenerate the golden corpus | `python tools/gen_golden.py` |
 
-Style: `rustfmt` defaults, `clippy -D warnings`, ESLint + Prettier for TS, line length 100.
+Style: [docs/CODE_STYLE.md](docs/CODE_STYLE.md) is the standard and rule 13 makes it binding. It
+covers naming per language, doc comments, what a comment must and must not contain, and the
+formatter and linter for each language. In short: `rustfmt` + `clippy -D warnings`, ESLint +
+Prettier, `clang-format` + `clang-tidy`, `stylua` + `luacheck`, `ruff`. Line length 100.
 Keep dependencies minimal; anything heavy goes behind a feature flag or into the sidecar, never into
 the core install. Add tests for new behaviour.
 
@@ -316,20 +337,24 @@ Never publish, tag or create a release without an explicit request from the owne
 
 ## 11. Current state (update this section when it changes)
 
-As of 2026-11-12:
+As of 2026-11-14:
 
-- **Repository:** `github.com/SoundsLikeJonny/Slate-To-UCS` at `bd0eef2`, three tracked files
-  (`README.md`, `LICENSE` MIT 2026, stock Python `.gitignore`). No code, no tags, no releases.
+- **Repository:** `github.com/SoundsLikeJonny/Slate-To-UCS` at `665fabf`, six tracked files plus
+  `docs/`. No code, no tags, no releases.
 - **Planning:** `docs/PLAN.md` revision 2 reconciles the handover brief
   (`ttucs/docs/plans/ttucs-studio.md`, 2026-11-10) with packaging, signing, CI/CD, docs and
-  changelog mechanics. Nineteen sections, phases 0–8.
-- **Blocking dependency:** `ttucs serve` does not exist yet. Phase 0 is a PR to `ttucs`
-  (`feat/serve-api`): the `serve` subcommand, `docs/serve-api.md`, the `predict --json` list shape
-  and `tests/test_serve.py`. Nothing here can be built end to end until it merges.
+  changelog mechanics. Nineteen sections, phases 0–8. `docs/LAYOUT.md` is the file-level view and
+  `docs/MILESTONES.md` the dated plan.
+- **Phase 0 is done.** `ttucs serve` merged into `ttucs` main as PR #14 (`0cee598`), with
+  `src/ttucs/serve.py`, `docs/serve-api.md` and `tests/test_serve.py`. Verified 2026-11-14: 28
+  serve tests pass; a live round-trip with `TTUCS_OFFLINE=1` and an empty `TTUCS_HOME` returned
+  `schema_version: 1`, `warm: true`, `manifest_verified: true`, a 401 without the token, a 413 over
+  the body cap, a list-shaped `/predict`, working `/parse` and `/taxonomy/*`, and a clean
+  `/shutdown`.
 - **Open decisions:** Azure Artifact Signing eligibility (individual US/CA or organisation);
   minimum REAPER version (6.x or 7.x); Windows arm64 in or out; whether `slate` ships in the MSI.
-  Rename is recommended for v1.
+  Rename is recommended for v1. Deadlines in `docs/MILESTONES.md` §10.
 - **Not yet created:** `changelog.d/`, `version.toml`, the Cargo and pnpm workspaces, `xtask`,
-  `packages/contract/openapi.yaml`, `.github/workflows/`, `CONTRIBUTING.md`, `docs/adr/`.
-- **Untracked and not ignored:** `.idea/`, `.abacusai/`, `docs/`. The first two belong in
-  `.gitignore` before the first real commit.
+  `packages/contract/openapi.yaml`, `.github/workflows/`, `CONTRIBUTING.md`, `CODEOWNERS`,
+  `docs/index.md`, `docs/adr/`, `rustfmt.toml`, `.clang-format`, `stylua.toml`, `.gitattributes`.
+- **Untracked and not ignored:** nothing. `.idea/` and `.abacusai/` are ignored as of PR #1.

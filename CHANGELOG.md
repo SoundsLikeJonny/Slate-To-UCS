@@ -40,6 +40,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at the first signed release, the `signtool` and `codesign` verification commands, the SmartScreen
   reputation caveat, the telemetry allowlist restated as a security boundary, dependency and supply
   chain controls, and a 90-day coordinated disclosure policy with safe harbour.
+- `docs/CODE_STYLE.md`: the per-language standard, made binding by `AGENTS.md` rule 13. Covers what
+  a comment must contain (module header, public API doc, why-comment, `// SAFETY:`, issue-linked
+  TODO) and must never be (commented-out code, restatement, banner art, attribution), then naming
+  and idiom tables for Rust, TypeScript and React, C++, Lua and Python, plus data and configuration
+  files. Fixes the domain vocabulary (`cat_id`, `CatID`, `bext`, `iXML`, the three `decision`
+  values) so code, JSON, docs and UI copy agree. Closes with the enforcement table: every check a
+  tool can make is a blocking CI gate, and only naming and comment quality are left to review.
+- `docs/TESTING.md`: the testing standard, made binding by `AGENTS.md` rules 14 and 15. States what
+  must be tested (every `pub` function, every error variant, every branch, every boundary, every
+  parser and writer, plus the seams where the product actually breaks), test naming and
+  arrange-act-assert structure, per-language tooling for Rust, TypeScript, C++, Lua and Python,
+  property-based and fuzz targets, the golden conformance oracle, determinism rules, per-crate
+  coverage floors, a flaky-test policy that forbids retries and `sleep`, and the CI gates. Also
+  covers assertions in production code per language, including why `assert` is wrong in Python
+  production code and why an assertion must never have a side effect.
 - `CHANGELOG.md`: this file, following Keep a Changelog 1.1.0 with `## [Unreleased]` at the top and
   compare links at the bottom. Entries are written directly under `[Unreleased]` until the
   `changelog.d/` fragment tooling lands, after which every PR adds a fragment and
