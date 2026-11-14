@@ -20,11 +20,13 @@
 
 mod buffer;
 mod error;
+mod process;
 mod resample;
 mod wav;
 
 pub use buffer::AudioBuffer;
 pub use error::AudioError;
+pub use process::Cancellable;
 pub use resample::{output_len, resample_channel};
 pub use wav::{decode_file, encode_pcm16, parse, write_pcm16, BwfMetadata, WavFile};
 

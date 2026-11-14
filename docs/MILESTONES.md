@@ -247,6 +247,24 @@ match.
 **Exit:** editing a transcript re-predicts in under 200 ms on a 200-row queue; the telemetry payload
 test asserts no transcript, filename, path or CatID appears in any field.
 
+#### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| re-predict | done: `rePredictChanged` sends one request for the changed rows in batches of 32; a test asserts one request and under 200 ms on a 200-row queue |
+| cancellation | done: `slate_audio::Cancellable` kills and reaps on drop; tests assert the process is reaped, that a second cancel is harmless, and that a dropped handle kills the child before it can write its marker file |
+| keyboard | done: `keyboard.ts` binding table and resolver, with a test that the table covers every action and that a text field wins over every binding except the export chord |
+| settings | done: `settings.ts` with per-field validation, defaults, unknown-key tolerance and round-trip persistence |
+| telemetry | done: allowlisted payload, `containsUserData` leak check, `DO_NOT_TRACK` and `SLATE_TELEMETRY` precedence, "what is sent" field list |
+| transcript editor UI | not started: the modules are in place, the panel is not |
+
+Verified locally: `cargo test --workspace` 367 tests plus doctests, `cargo clippy --workspace
+--all-targets -- -D warnings` clean, `cargo fmt --all --check` clean, `pnpm --dir apps/desktop test`
+235 tests, `pnpm --dir apps/desktop typecheck` clean.
+
+The 200 ms figure is measured against a stub client, so it proves the request count and the
+scheduling, not the engine's latency. The real number needs a warm engine on the owner's machine.
+
 ### Week 6 (12-21 → 12-27): rename
 
 | goal | detail |

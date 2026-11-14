@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `apps/desktop/src/lib/settings.ts`: the settings model, its defaults and its validation. Every
+  field is validated on the way in and falls back to its default with a recorded problem rather
+  than throwing, so a hand-edited or truncated settings file cannot stop the app from starting.
+  Unknown keys are ignored, because a file written by a newer build must still load.
+- `apps/desktop/src/lib/telemetry.ts`: the payload, built from numbers and closed enums only, with
+  `containsUserData` to prove that no transcript, filename, path or CatID can appear in any field.
+  `DO_NOT_TRACK=1` always wins, then `SLATE_TELEMETRY=0`, then `SLATE_TELEMETRY=1`, then the stored
+  setting. `PAYLOAD_FIELDS` is the "what is sent" panel, and a test asserts it describes every field
+  of a built payload.
+- `apps/desktop/src/lib/keyboard.ts`: the binding table and a pure resolver. `j`/`k`, `Enter`, `e`,
+  `c`, `o`, `Space` and `Cmd/Ctrl+E`, with a text field winning over every binding except the
+  command-key export. Every action carries the label its button shows, so the keyboard and the mouse
+  cannot drift apart.
+- `apps/desktop/src/lib/repredict.ts`: re-predicting only the rows whose transcript changed, in
+  batches of 32. A test asserts one request for one edited row in a 200-row queue and a wall time
+  under 200 ms.
+- `crates/slate-audio`: `Cancellable`, a child process handle that kills and reaps on drop, so a
+  cancelled transcription leaves no orphan. `slate transcribe` now runs Whisper through it.
 - `crates/slate-tagger`: rename planning, journalling and undo. `plan_renames` refuses an
   overwrite, a duplicate source, two entries claiming one name, a name with a forbidden
   character, a reserved Windows device name, a trailing space or dot, an over-long name and a
