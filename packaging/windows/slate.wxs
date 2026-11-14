@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The per-machine MSI for Slate-To-UCS.
+
+  Built by packaging/windows/build-msi.ps1, which passes every path as a preprocessor
+  variable so this file holds no absolute path and no machine-specific value.
+
+  Two rules govern the shape of this file:
+
+  1. UpgradeCode never changes. It is the identity Windows Installer uses to recognise a
+     previous version, so changing it turns an upgrade into a second side-by-side install.
+     ProductCode is "*", which makes every build a distinct product for the same upgrade
+     family.
+
+  2. Nothing is written into a user profile. The REAPER integration is installed by the
+     application into %APPDATA%\REAPER on request, because a per-machine installer cannot
+     know which users exist and cannot handle a portable REAPER. See PLAN.md 14.6.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+  <Product Id="*"
+           Name="Slate-To-UCS"
+           Language="1033"
+           Version="$(var.Version)"
+           Manufacturer="Jon Evans"
+           UpgradeCode="703EA0F0-9BEE-49BB-A334-BE4C34D3B3F0">
+
+    <Package InstallerVersion="500"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Platform="x64"
+             Description="Slate-To-UCS $(var.Version)"
+             Comments="Slate-To-UCS labels sound-effect libraries with UCS metadata." />
+
+    <!-- A downgrade is refused rather than silently replacing a newer install. -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Slate-To-UCS is already installed. Uninstall it first."
+                  Schedule="afterInstallInitialize" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="SlateIcon" SourceFile="$(var.IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="SlateIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/SoundsLikeJonny/Slate-To-UCS" />
+
+    <!-- Windows 10 1809 or newer, which is where the WebView2 evergreen runtime is present. -->
+    <Condition Message="Slate-To-UCS needs Windows 10 version 1809 or newer.">
+      <![CDATA[Installed OR (VersionNT >= 603)]]>
+    </Condition>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="Slate-To-UCS">
+
+          <Component Id="MainExecutable" Guid="4630EB98-A95F-4C90-8544-11B814C2CE36" Win64="yes">
+            <File Id="SlateExe" Source="$(var.SlateExe)" KeyPath="yes" />
+          </Component>
+
+          <Component Id="LicenceFile" Guid="*" Win64="yes">
+            <File Id="LicenceTxt" Source="$(var.LicencePath)" KeyPath="yes" />
+          </Component>
+
+          <Component Id="ReadmeFile" Guid="*" Win64="yes">
+            <File Id="ReadmeMd" Source="$(var.ReadmePath)" KeyPath="yes" />
+          </Component>
+
+          <!--
+            The REAPER extension ships beside the app, not into a user profile. The app
+            copies it into UserPlugins when the owner asks for the integration.
+          -->
+          <Component Id="ReaperExtension" Guid="*" Win64="yes">
+            <File Id="SlateReaperDll" Source="$(var.ReaperDll)" KeyPath="yes" />
+          </Component>
+
+          <!--
+            The Lua scripts are installed here as the source of truth for the integration
+            installer, so an upgrade replaces them in one place.
+          -->
+          <Directory Id="ScriptsFolder" Name="Scripts">
+            <Directory Id="SlateScriptsFolder" Name="Slate-To-UCS">
+              <Component Id="LuaScripts" Guid="29A4C5FF-0375-48B3-9905-551EB1523453" Win64="yes">
+                <File Id="LuaApi" Source="$(var.ScriptsDir)\lib\slate_api.lua" KeyPath="yes" />
+                <File Id="LuaTagSelected" Source="$(var.ScriptsDir)\slate_tag_selected.lua" />
+                <File Id="LuaTagProject" Source="$(var.ScriptsDir)\slate_tag_project.lua" />
+                <File Id="LuaRenderPattern" Source="$(var.ScriptsDir)\slate_render_pattern.lua" />
+                <File Id="LuaOpenApp" Source="$(var.ScriptsDir)\slate_open_app.lua" />
+              </Component>
+            </Directory>
+          </Directory>
+
+          <!--
+            The ttucs sidecar is a onedir tree, so it is harvested rather than listed.
+            `heat dir` writes SidecarFiles.wxs, which is compiled alongside this file.
+            When the sidecar is absent the variable is undefined and the fragment is
+            skipped, so an MSI can still be built and smoke-tested without it.
+          -->
+          <?ifdef SidecarDir ?>
+          <Directory Id="SidecarFolder" Name="ttucs">
+            <Component Id="SidecarPlaceholder" Guid="*" Win64="yes">
+              <CreateFolder />
+              <RegistryValue Root="HKLM"
+                             Key="Software\Slate-To-UCS"
+                             Name="SidecarDir"
+                             Type="string"
+                             Value="[SidecarFolder]"
+                             KeyPath="yes" />
+            </Component>
+          </Directory>
+          <?endif ?>
+
+        </Directory>
+      </Directory>
+
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Slate-To-UCS">
+          <Component Id="StartMenuShortcut" Guid="*" Win64="yes">
+            <Shortcut Id="StartMenuLink"
+                      Name="Slate-To-UCS"
+                      Description="Label sound effects with UCS metadata"
+                      Target="[INSTALLFOLDER]slate.exe"
+                      WorkingDirectory="INSTALLFOLDER" />
+            <RemoveFolder Id="RemoveApplicationProgramsFolder" On="uninstall" />
+            <RegistryValue Root="HKCU"
+                           Key="Software\Slate-To-UCS"
+                           Name="StartMenu"
+                           Type="integer"
+                           Value="1"
+                           KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id="Main" Title="Slate-To-UCS" Level="1" Display="expand" Absent="disallow">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="LicenceFile" />
+      <ComponentRef Id="ReadmeFile" />
+      <ComponentRef Id="ReaperExtension" />
+      <ComponentRef Id="LuaScripts" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <?ifdef SidecarDir ?>
+      <ComponentGroupRef Id="SidecarComponents" />
+      <?endif ?>
+    </Feature>
+
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenceRtf)" />
+    <UIRef Id="WixUI_InstallDir" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+
+  </Product>
+</Wix>

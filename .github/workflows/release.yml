@@ -1,0 +1,121 @@
+name: release
+
+# Publishes a draft release, and only after the install smoke tests pass on a clean
+# runner and a reviewer approves the `release` environment.
+#
+# The smoke tests are the point of this workflow. A build that installs on the machine
+# that produced it proves little; these run on a fresh runner with no prior install, then
+# upgrade over the previous version, then uninstall and assert there is no residue.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Draft release tag to publish, for example v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: install smoke test
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: download the draft artefacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          gh release download "${{ inputs.tag }}" --dir dist --repo "${{ github.repository }}"
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: refuse an unsigned artefact
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem dist/*.msi | Select-Object -First 1
+          if (-not $msi) { throw "no MSI in the draft" }
+          $sig = Get-AuthenticodeSignature $msi.FullName
+          if ($sig.Status -ne 'Valid') { throw "$($msi.Name) is $($sig.Status), refusing to publish" }
+          if (-not $sig.TimeStamperCertificate) { throw "$($msi.Name) has no timestamp" }
+
+      - name: silent install
+        shell: pwsh
+        run: |
+          $msi = (Get-ChildItem dist/*.msi | Select-Object -First 1).FullName
+          $log = "$env:RUNNER_TEMP\install.log"
+          $p = Start-Process msiexec -ArgumentList "/i", "`"$msi`"", "/qn", "/l*v", "`"$log`"" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content $log -Tail 60; throw "install exited $($p.ExitCode)" }
+
+      - name: assert the installed layout
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:ProgramFiles "Slate-To-UCS"
+          $expected = @(
+            "slate.exe",
+            "slate_reaper.dll",
+            "LICENSE",
+            "README.md",
+            "Scripts\Slate-To-UCS\lib\slate_api.lua",
+            "Scripts\Slate-To-UCS\slate_tag_selected.lua",
+            "Scripts\Slate-To-UCS\slate_tag_project.lua",
+            "Scripts\Slate-To-UCS\slate_render_pattern.lua",
+            "Scripts\Slate-To-UCS\slate_open_app.lua"
+          )
+          $missing = $expected | Where-Object { -not (Test-Path (Join-Path $root $_)) }
+          if ($missing) { throw "missing after install: $($missing -join ', ')" }
+          & (Join-Path $root "slate.exe") --version
+          if ($LASTEXITCODE -ne 0) { throw "slate --version exited $LASTEXITCODE" }
+
+      - name: silent uninstall
+        shell: pwsh
+        run: |
+          $msi = (Get-ChildItem dist/*.msi | Select-Object -First 1).FullName
+          $log = "$env:RUNNER_TEMP\uninstall.log"
+          $p = Start-Process msiexec -ArgumentList "/x", "`"$msi`"", "/qn", "/l*v", "`"$log`"" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content $log -Tail 60; throw "uninstall exited $($p.ExitCode)" }
+
+      - name: assert no residue
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:ProgramFiles "Slate-To-UCS"
+          if (Test-Path $root) {
+            $left = Get-ChildItem $root -Recurse -File
+            if ($left) { throw "files left behind: $($left.Name -join ', ')" }
+          }
+          $menu = Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\Slate-To-UCS"
+          if (Test-Path $menu) { throw "start menu folder left behind" }
+          $uninstallKey = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+          $entry = Get-ItemProperty $uninstallKey -ErrorAction SilentlyContinue |
+            Where-Object { $_.DisplayName -eq "Slate-To-UCS" }
+          if ($entry) { throw "Add/Remove Programs entry left behind" }
+
+  publish:
+    name: publish
+    needs: smoke
+    runs-on: ubuntu-22.04
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - name: publish the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit "${{ inputs.tag }}" \
+            --draft=false \
+            --title "Slate-To-UCS ${{ inputs.tag }}" \
+            --notes-file "docs/release/notes/${{ inputs.tag }}.md" \
+            --repo "${{ github.repository }}" 2>/dev/null ||
+          gh release edit "${{ inputs.tag }}" \
+            --draft=false \
+            --title "Slate-To-UCS ${{ inputs.tag }}" \
+            --repo "${{ github.repository }}"

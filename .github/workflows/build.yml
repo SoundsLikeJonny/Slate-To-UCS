@@ -1,0 +1,181 @@
+name: build
+
+# A tag is a build request, not a release. This workflow produces signed artefacts and
+# uploads them to a draft release; `release.yml` is what publishes, and only after a
+# reviewer approves and the install smoke tests pass.
+#
+# Signing is skipped, not faked, when the Azure Artifact Signing identity is absent. An
+# unsigned artefact is uploaded with a `-unsigned` suffix so it can never be mistaken for
+# a signed one, and `sign-verify.yml` fails on it.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and upload without signing or releasing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: never
+  RUSTUP_TOOLCHAIN: stable
+
+jobs:
+  windows:
+    name: windows x64
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: read the version
+        id: version
+        shell: pwsh
+        run: |
+          $line = Select-String -Path version.toml -Pattern '^version\s*=\s*"([^"]+)"' | Select-Object -First 1
+          "value=$($line.Matches[0].Groups[1].Value)" >> $env:GITHUB_OUTPUT
+
+      - name: build the CLI
+        run: cargo build --release -p slate-cli
+
+      - name: build the REAPER extension
+        run: |
+          cargo xtask fetch-reaper-sdk
+          cmake -S apps/reaper/extension -B apps/reaper/extension/build -DSLATE_BUILD_EXTENSION=ON
+          cmake --build apps/reaper/extension/build --config Release
+
+      - name: build the UI
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir apps/desktop build
+
+      - name: install WiX
+        shell: pwsh
+        run: |
+          $url = "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip"
+          Invoke-WebRequest -Uri $url -OutFile wix.zip
+          Expand-Archive wix.zip -DestinationPath "$env:RUNNER_TEMP\wix314"
+          "WIX_BIN=$env:RUNNER_TEMP\wix314" >> $env:GITHUB_ENV
+
+      - name: install NSIS
+        shell: pwsh
+        run: |
+          $url = "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.11/nsis-3.11.zip"
+          Invoke-WebRequest -Uri $url -OutFile nsis.zip
+          Expand-Archive nsis.zip -DestinationPath "$env:RUNNER_TEMP\nsis"
+          "MAKENSIS=$env:RUNNER_TEMP\nsis\nsis-3.11\Bin\makensis.exe" >> $env:GITHUB_ENV
+
+      - name: build the MSI
+        shell: pwsh
+        run: ./packaging/windows/build-msi.ps1 -Version ${{ steps.version.outputs.value }}
+
+      - name: build the NSIS installer
+        shell: pwsh
+        run: ./packaging/windows/build-nsis.ps1 -Version ${{ steps.version.outputs.value }}
+
+      - name: sign the executables, then the installers
+        id: sign
+        if: ${{ vars.AZURE_SIGNING_ENABLED == 'true' && inputs.dry_run != true }}
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\packaging\windows\out
+          files-folder-filter: msi,exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: verify the signature
+        if: steps.sign.outcome == 'success'
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem packaging/windows/out/*.msi | Select-Object -First 1
+          $sig = Get-AuthenticodeSignature $msi.FullName
+          $sig | Format-List Status, SignerCertificate, TimeStamperCertificate
+          if ($sig.Status -ne 'Valid') { throw "signature status is $($sig.Status)" }
+          if (-not $sig.TimeStamperCertificate) { throw "no timestamp: the signature dies with the certificate" }
+          signtool verify /pa /v $msi.FullName
+
+      - name: mark unsigned artefacts
+        if: steps.sign.outcome != 'success'
+        shell: pwsh
+        run: |
+          Get-ChildItem packaging/windows/out/*.msi, packaging/windows/out/*.exe | ForEach-Object {
+            Rename-Item $_.FullName ($_.BaseName + "-unsigned" + $_.Extension)
+          }
+
+      - name: SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: packaging/windows/out
+          format: spdx-json
+          output-file: packaging/windows/out/slate-${{ steps.version.outputs.value }}.spdx.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: packaging/windows/out/*
+          if-no-files-found: error
+          retention-days: 30
+
+  attest:
+    name: provenance
+    needs: windows
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-x64
+          path: dist
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/*"
+
+  draft:
+    name: draft release
+    needs: [windows, attest]
+    if: ${{ inputs.dry_run != true }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-x64
+          path: dist
+      - name: create or update the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$tag" dist/* \
+              --draft \
+              --title "Slate-To-UCS ${tag#v}" \
+              --notes "Draft. Not published until the install smoke tests pass and a reviewer approves." \
+              --repo "$GITHUB_REPOSITORY"
+          fi

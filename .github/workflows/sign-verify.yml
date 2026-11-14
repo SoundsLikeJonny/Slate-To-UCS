@@ -1,0 +1,85 @@
+name: sign-verify
+
+# Verifies the signatures on a downloaded artefact, independently of the build that made
+# it. This is the check a user can reproduce, and the one that catches a build which
+# silently shipped unsigned.
+#
+# It runs on every pull request that touches packaging, weekly, and on demand against a
+# published release. On a pull request it builds an MSI that is unsigned by construction
+# and asserts that the check rejects it, so the check is proven to be able to fail rather
+# than merely observed to pass.
+
+on:
+  pull_request:
+    paths:
+      - "packaging/**"
+      - ".github/workflows/sign-verify.yml"
+      - ".github/workflows/build.yml"
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to verify, for example v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify signatures
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: download the release artefacts
+        if: ${{ inputs.tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          gh release download "${{ inputs.tag }}" --dir dist --repo "${{ github.repository }}"
+
+      - name: build an unsigned MSI
+        if: ${{ inputs.tag == '' }}
+        shell: pwsh
+        run: |
+          cargo build --release -p slate-cli
+          cargo xtask fetch-reaper-sdk
+          cmake -S apps/reaper/extension -B apps/reaper/extension/build -DSLATE_BUILD_EXTENSION=ON
+          cmake --build apps/reaper/extension/build --config Release
+          $url = "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip"
+          Invoke-WebRequest -Uri $url -OutFile wix.zip
+          Expand-Archive wix.zip -DestinationPath "$env:RUNNER_TEMP\wix314"
+          $env:WIX_BIN = "$env:RUNNER_TEMP\wix314"
+          ./packaging/windows/build-msi.ps1
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item packaging/windows/out/*.msi dist/
+
+      - name: check every installer, expecting the documented outcome
+        shell: pwsh
+        env:
+          EXPECT: ${{ inputs.tag != '' && 'valid' || 'invalid' }}
+        run: |
+          $installers = Get-ChildItem dist -Include *.msi,*.exe -Recurse -File
+          if (-not $installers) { throw "no installer found in dist" }
+
+          $problems = @()
+          foreach ($file in $installers) {
+            $sig = Get-AuthenticodeSignature $file.FullName
+            Write-Host "$($file.Name): $($sig.Status)"
+            if ($env:EXPECT -eq 'valid') {
+              if ($sig.Status -ne 'Valid') { $problems += "$($file.Name) is $($sig.Status)" }
+              elseif (-not $sig.TimeStamperCertificate) { $problems += "$($file.Name) has no timestamp" }
+              else { signtool verify /pa /v $file.FullName }
+            } else {
+              # An unsigned build must be rejected, or the check proves nothing.
+              if ($sig.Status -eq 'Valid') { $problems += "$($file.Name) verified, but this build is unsigned" }
+            }
+          }
+
+          if ($problems) { throw ($problems -join "; ") }
+          Write-Host "all $($installers.Count) installer(s) matched the expected outcome: $env:EXPECT"

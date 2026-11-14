@@ -55,6 +55,12 @@ test-reaper:
     cmake --build apps/reaper/extension/build --config Release
     ctest --test-dir apps/reaper/extension/build --output-on-failure -C Release
 
+# Both installers. Needs WIX_BIN and MAKENSIS; see packaging/README.md.
+package:
+    cargo build --release -p slate-cli
+    pwsh packaging/windows/build-msi.ps1
+    pwsh packaging/windows/build-nsis.ps1
+
 # The Lua scripts are tested without REAPER, so this needs only a Lua 5.4 interpreter.
 test-scripts:
     lua apps/reaper/scripts/tests/slate_api_test.lua
