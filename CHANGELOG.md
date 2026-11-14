@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `apps/desktop/src/lib/queue.ts`: the review queue as pure functions. Rows sort by confidence
+  ascending with a total order so a re-render never reshuffles equal rows, the six filter chips
+  count themselves, an override keeps the classifier's original guess beside it, and predict
+  calls batch at 32 texts.
+- `apps/desktop/src/lib/filename.ts`: UCS file names built, parsed from the right so an
+  underscore inside the effect name survives, and validated as the user types, including a
+  CatID check against the loaded taxonomy.
+- `apps/desktop/src/lib/export.ts`: RFC 4180 CSV and JSONL over a fixed column set, so two
+  exports of the same queue are byte-identical, plus the column preview shown above the buttons.
+- `apps/desktop/src/app/Queue.tsx`: the drop zone, the filter chips and a virtualised table that
+  renders only the scroll window plus an overscan, so a 200-file drop stays responsive.
+- `apps/desktop/src/app/Inspector.tsx`: transcript, ranked alternatives, decision badge, an
+  editable file name with live validation, keywords, and a keyboard-first CatID override whose
+  search ranks CatID prefix over substring over subcategory over category.
+- `apps/desktop/src/app/ExportPanel.tsx`: the column preview and the CSV and JSONL buttons.
 - `crates/slate-shell`: the desktop logic that needs no window. `InstanceGuard` takes an
   advisory OS file lock so a second launch exits instead of opening a second window, and a
   crashed process cannot leave a stale lock behind. `Sidecar` resolves the bundled `ttucs`
