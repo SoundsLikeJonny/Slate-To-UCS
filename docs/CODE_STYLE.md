@@ -281,6 +281,13 @@ These spellings are fixed. They appear in code, JSON, docs and UI copy identical
 | Python lint and format | `ruff check`, `ruff format --check` | CI, blocking |
 | Markdown links | `cargo xtask docs-check` | CI, blocking |
 | Naming and comment quality | review | human |
+| Test coverage per crate | [docs/TESTING.md](TESTING.md) floors | CI, blocking |
+| Test naming and structure | [docs/TESTING.md](TESTING.md) | review |
 
 Anything a tool can decide is a tool's decision and is not argued in review. Anything left to
 review is listed in the tables above, so a reviewer can point at a rule rather than a preference.
+
+Testing is specified separately in [TESTING.md](TESTING.md): what must be tested, per-language
+frameworks, property and fuzz testing, golden conformance, determinism rules, coverage floors and
+the flaky-test policy. Assertions in production code are covered there too, because an assertion is
+a testing concern that ships.

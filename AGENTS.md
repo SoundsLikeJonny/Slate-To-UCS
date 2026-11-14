@@ -82,6 +82,16 @@ No surface owns inference.
     or linter can decide is not a review comment. Public API gets a doc comment; a comment explains
     why, never what. No commented-out code, no banner art, no attribution comments. SDK symbols keep
     their exact spelling and are wrapped in adapters.
+14. **Tests are [docs/TESTING.md](docs/TESTING.md), and it is binding.** Every `pub` function, every
+    error variant, every branch and every boundary gets a test. A bug fix ships with the test that
+    would have caught it. Tests are deterministic: no network, no wall clock, no fixed port, no
+    unseeded randomness, no `sleep` to fix a race, no retries to green. Coverage floors are enforced
+    per crate. A conformance failure is never fixed by loosening the assertion.
+15. **Assertions are for invariants, not error handling.** `debug_assert!` in Rust for internal
+    invariants, `invariant()` in TypeScript, `assert()` in C++ only where `NDEBUG` cannot strip
+    something needed, `assert` in Lua for argument validation, and never `assert` in Python
+    production code because `python -O` removes it. Every assertion message names the invariant and
+    the values, and no assertion has a side effect.
 
 ## 3. How it works (high level)
 
@@ -187,6 +197,9 @@ The engine is not in this repo. Until `ttucs serve` lands, point the app at a lo
 | task | command |
 |---|---|
 | lint and test (must pass before any PR) | `just check` then `just test` |
+| unit suite only, fast | `just test-unit` |
+| coverage with the enforced floors | `just coverage` |
+| fuzz smoke, 60 s per parser | `just fuzz` |
 | build release binaries for the host | `just build` |
 | build MSI/NSIS/DMG/deb for the host | `just bundle` |
 | bump the product version everywhere | `just bump X.Y.Z` |
