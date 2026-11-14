@@ -14,6 +14,9 @@ rust-version = "1.75"
 license = "MIT"
 authors = ["Jon Evans"]
 repository = "https://github.com/SoundsLikeJonny/Slate-To-UCS"
+# This is an application, not a library set. Nothing here is published to crates.io,
+# which also lets `cargo deny` treat the intra-workspace path dependencies as private.
+publish = false
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
