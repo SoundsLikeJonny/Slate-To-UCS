@@ -95,6 +95,32 @@ jobs:
           cargo install cargo-deny --locked
           cargo deny --manifest-path apps/desktop/src-tauri/Cargo.toml check
 
+  reaper:
+    name: reaper extension builds
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            extension: "ON"
+          - os: macos-latest
+            extension: "OFF"
+          - os: ubuntu-22.04
+            extension: "OFF"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: fetch the pinned SDK headers
+        run: cargo xtask fetch-reaper-sdk
+      - name: configure
+        run: cmake -S apps/reaper/extension -B apps/reaper/extension/build -DSLATE_BUILD_EXTENSION=${{ matrix.extension }}
+      - name: build
+        run: cmake --build apps/reaper/extension/build --config Release
+      - name: unit tests
+        run: ctest --test-dir apps/reaper/extension/build --output-on-failure -C Release
+
   golden:
     name: golden corpus is current
     runs-on: ubuntu-22.04

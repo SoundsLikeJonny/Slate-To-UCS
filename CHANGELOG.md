@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `apps/reaper/extension`: the REAPER extension. `ReaperPluginEntry` registers two named
+  actions and a `hookcommand` hook, so a script reaches the same code path through
+  `Main_OnCommand`. A worker thread owns the only socket and hands results back through a
+  lock-free single-producer queue drained by a `timer` callback, which records its own
+  duration and reports anything over the 50 ms budget. `merge_notes` replaces the first
+  `slate:` line in place and preserves every other byte, including CRLF; `UndoBlock` wraps
+  a whole batch in one `Undo_BeginBlock2`/`Undo_EndBlock2` pair. The JSON reader is total:
+  malformed input returns false rather than throwing into the host.
+- `cargo xtask fetch-reaper-sdk`: downloads `reaper_plugin.h` and
+  `reaper_plugin_functions.h` at pinned SHA-256 values and refuses a file whose hash does
+  not match, so a build either uses the reviewed bytes or fails. The destination is
+  gitignored and carries a licence note naming Cockos.
+- `just check-reaper` and a `reaper extension builds` CI job on three platforms.
 - `apps/desktop/src/lib/queue.ts`: the review queue as pure functions. Rows sort by confidence
   ascending with a total order so a re-render never reshuffles equal rows, the six filter chips
   count themselves, an override keeps the classifier's original guess beside it, and predict

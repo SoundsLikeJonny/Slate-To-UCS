@@ -11,6 +11,7 @@
 mod bump;
 mod changelog;
 mod docs_check;
+mod fetch_reaper_sdk;
 mod gen_golden;
 mod sync_taxonomy;
 mod verify_versions;
@@ -42,6 +43,7 @@ fn main() -> ExitCode {
         "docs-check" => docs_check::run(rest),
         "gen-golden" => gen_golden::run(rest),
         "sync-taxonomy" => sync_taxonomy::run(rest),
+        "fetch-reaper-sdk" => fetch_reaper_sdk::run(rest),
         "coverage" => run_tool(
             "cargo",
             &["llvm-cov", "--workspace", "--fail-under-lines", "85"],
@@ -82,6 +84,7 @@ fn usage() -> String {
         "  docs-check            fail on broken relative links in Markdown",
         "  gen-golden [--check]  regenerate or verify the conformance corpus",
         "  sync-taxonomy         refresh the bundled UCS CSV and its pinned hash",
+        "  fetch-reaper-sdk      download the pinned REAPER extension headers",
         "  coverage              cargo llvm-cov with the enforced floor",
         "  fuzz                  60 s fuzz smoke on the WAV parser",
     ]
@@ -121,10 +124,20 @@ mod tests {
             "docs-check",
             "gen-golden",
             "sync-taxonomy",
+            "fetch-reaper-sdk",
             "coverage",
             "fuzz",
         ] {
             assert!(text.contains(task), "usage omits {task}");
         }
+    }
+
+    #[test]
+    fn fetch_reaper_sdk_is_dispatched() {
+        assert_eq!(
+            fetch_reaper_sdk::HEADERS.len(),
+            2,
+            "the dispatch arm and the header list must agree"
+        );
     }
 }
