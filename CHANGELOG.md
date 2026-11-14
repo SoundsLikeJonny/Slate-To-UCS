@@ -8,19 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `apps/reaper/extension`: the REAPER extension. `ReaperPluginEntry` registers two named
-  actions and a `hookcommand` hook, so a script reaches the same code path through
-  `Main_OnCommand`. A worker thread owns the only socket and hands results back through a
-  lock-free single-producer queue drained by a `timer` callback, which records its own
-  duration and reports anything over the 50 ms budget. `merge_notes` replaces the first
-  `slate:` line in place and preserves every other byte, including CRLF; `UndoBlock` wraps
-  a whole batch in one `Undo_BeginBlock2`/`Undo_EndBlock2` pair. The JSON reader is total:
-  malformed input returns false rather than throwing into the host.
-- `cargo xtask fetch-reaper-sdk`: downloads `reaper_plugin.h` and
-  `reaper_plugin_functions.h` at pinned SHA-256 values and refuses a file whose hash does
-  not match, so a build either uses the reviewed bytes or fails. The destination is
-  gitignored and carries a licence note naming Cockos.
-- `just check-reaper` and a `reaper extension builds` CI job on three platforms.
+- `apps/reaper/scripts/lib/slate_api.lua`: one code path per action for every ReaScript. The
+  extension's `API_Slate_*` exports when it is loaded, `slate` on the command line when it is
+  not, and the same table shape either way. It carries a JSON decoder written out rather than
+  pulled from luarocks, because ReaScript ships no JSON module and a recordist's machine has no
+  package manager. `null` decodes to a sentinel rather than `nil`, since a `nil` in a Lua array
+  truncates it and shifts every later index.
+- `apps/reaper/scripts/`: `slate_tag_selected.lua`, `slate_tag_project.lua` (gfx progress window,
+  Escape to cancel), `slate_render_pattern.lua` and `slate_open_app.lua`, plus
+  `index.xml.tmpl` for ReaPack.
+- `apps/reaper/scripts/tests/slate_api_test.lua`: 60 checks over the decoder, the identifier
+  rules, notes merging, the render pattern, both predict paths, tagging, the undo block and
+  cancellation. Plain Lua with no framework, so `lua` alone runs it.
+- `crates/slate-reaper` export `API_Slate_Predict`: returns the prediction JSON for one
+  description, valid until the next call on the same thread, which is what REAPER's Lua binding
+  needs.
+- `cargo xtask reaper-install`: detects `%APPDATA%\REAPER`, the macOS Application Support path,
+  `XDG_CONFIG_HOME` and portable installs via `reaper.ini`, copies the scripts, and writes a
+  manifest of exactly what it wrote. `--uninstall` removes only those files, so a user's own
+  script in the same directory survives.
+- `.github/workflows/reapack.yml`: fills the index template and pushes it to the `reapack`
+  branch on a tag.
 - `apps/desktop/src/lib/queue.ts`: the review queue as pure functions. Rows sort by confidence
   ascending with a total order so a re-render never reshuffles equal rows, the six filter chips
   count themselves, an override keeps the classifier's original guess beside it, and predict

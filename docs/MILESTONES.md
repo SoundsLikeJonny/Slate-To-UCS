@@ -380,6 +380,25 @@ needs the full SDK placed beside the fetched headers.
 **Exit:** scripts install via ReaPack and work with the extension present and absent; the app's
 **Install REAPER integration** action is reversible.
 
+#### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| `API_Slate_*` | done: `API_Slate_Predict` added beside `Health`, `LastDrainMs` and `SchemaVersion` |
+| scripts | done: tag selected, tag project with a gfx progress window and Escape to cancel, render pattern, open app |
+| fallback | done: `lib/slate_api.lua` calls `slate predict --json` when the extension is absent, and a test asserts the command line it builds |
+| ReaPack | done: `index.xml.tmpl` plus `reapack.yml`, which fills the template and pushes to the `reapack` branch on a tag |
+| install | done: `cargo xtask reaper-install` detects the per-user and portable resource directories, copies, and writes a manifest; `--uninstall` removes only what the manifest lists |
+
+Verified locally: `lua apps/reaper/scripts/tests/slate_api_test.lua` 60 checks, 0 failures;
+`cargo test -p xtask` 75 passed; `cargo test --workspace` 402 passed plus doctests; clippy and fmt
+clean; `slate_reaper.dll` still builds and its 69 checks pass; an install into a scratch directory
+wrote 5 scripts plus the manifest and `--uninstall` removed all 6, leaving nothing behind.
+
+The exit criterion is not met: no REAPER session has loaded the scripts, so "works with the
+extension present and absent" is proven against a stand-in REAPER table rather than the real host,
+and ReaPack has never fetched the index because no tag has been pushed.
+
 ### Risks
 
 - The REAPER SDK licence review must happen before week 7, not during it. If it blocks, M4 slips and
