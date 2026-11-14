@@ -29,7 +29,10 @@ confidence-threshold = 0.9
 
 [bans]
 multiple-versions = "warn"
+# Path dependencies inside a workspace carry no version requirement by design; a
+# wildcard on a registry dependency is still denied.
 wildcards = "deny"
+allow-wildcard-paths = true
 deny = []
 
 [sources]

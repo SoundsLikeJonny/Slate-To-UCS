@@ -23,7 +23,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2022, macos-14, ubuntu-22.04]
+        # `macos-14` was retired as a hosted runner label; `macos-latest` tracks
+        # whatever image GitHub currently publishes.
+        os: [windows-2022, macos-latest, ubuntu-22.04]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

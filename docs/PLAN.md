@@ -722,7 +722,7 @@ out in our release notes because it changes what our clients receive.
 |---|---|---|
 | Windows x64 | `windows-2022` | `.msi`, `.exe` (NSIS), `slate.exe`, `slate_reaper.dll` |
 | Windows arm64 | `windows-2022` cross | `.msi`, `.exe` (phase 8) |
-| macOS arm64 | `macos-14` | `.dmg`, `slate`, `slate_reaper.dylib` |
+| macOS arm64 | `macos-latest` | `.dmg`, `slate`, `slate_reaper.dylib` |
 | macOS x64 | `macos-13` | `.dmg`, `slate`, `slate_reaper.dylib` |
 | Linux x64 | `ubuntu-22.04` | `.deb`, `.rpm`, `.AppImage`, `slate`, `slate_reaper.so` |
 

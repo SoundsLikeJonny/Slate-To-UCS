@@ -274,6 +274,8 @@ fn truncate(body: &str, limit: usize) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::io::{Read, Write};
+
     use super::*;
 
     #[test]
@@ -367,6 +369,146 @@ mod tests {
 
         assert!(
             matches!(err, EngineError::RequestTooLarge(_)),
+            "got {err:?}"
+        );
+    }
+
+    /// Serve `requests` connections on a loopback port, answering each with the body
+    /// `handler` returns for that request line. Returns the port.
+    fn spawn_router<F>(requests: usize, handler: F) -> u16
+    where
+        F: Fn(&str) -> String + Send + 'static,
+    {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+        let port = listener.local_addr().expect("addr").port();
+        std::thread::spawn(move || {
+            for _ in 0..requests {
+                let Ok((mut stream, _)) = listener.accept() else {
+                    return;
+                };
+                let mut sink = [0u8; 4096];
+                let n = stream.read(&mut sink).unwrap_or(0);
+                let request_line = String::from_utf8_lossy(&sink[..n])
+                    .lines()
+                    .next()
+                    .unwrap_or_default()
+                    .to_string();
+                let body = handler(&request_line);
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+        port
+    }
+
+    fn client_on(port: u16) -> Client {
+        Client::with_timeout(
+            Endpoint {
+                schema_version: 1,
+                host: "127.0.0.1".to_string(),
+                port,
+                token: "t".to_string(),
+                pid: 1,
+                started: String::new(),
+                ttucs_version: String::new(),
+            },
+            Duration::from_secs(5),
+        )
+    }
+
+    #[test]
+    fn health_reads_the_document() {
+        let port = spawn_router(1, |line| {
+            assert_eq!(line, "GET /health HTTP/1.1");
+            r#"{"schema_version":1,"status":"ok","warm":true,"ttucs_version":"0.3.0","ucs_version":"8.2.1","model":{"name":"bow","version":"0.2.0"},"offline":true,"unknown_threshold":0.4,"category_threshold":0.4}"#.to_string()
+        });
+
+        let health = client_on(port).health().expect("health");
+
+        assert!(health.warm);
+        assert_eq!(health.status, "ok");
+    }
+
+    #[test]
+    fn predict_reads_the_envelope() {
+        let port = spawn_router(1, |line| {
+            assert_eq!(line, "POST /predict HTTP/1.1");
+            r#"{"schema_version":1,"predictions":[{"cat_id":"DOORCreak","category":"DOOR","subcategory":"Creak","cat_short":"Creak","category_full":"DOOR-Creak","confidence":0.9,"decision":"confident","filename":"DOORCreak_Door Creak_NONE_NONE","fx_name":"Door Creak","keywords":["Door","Creak"]}]}"#.to_string()
+        });
+
+        let predictions = client_on(port)
+            .predict(&["door creak".to_string()], Some(3))
+            .expect("predict");
+
+        assert_eq!(predictions.len(), 1);
+        assert_eq!(predictions[0].cat_id, "DOORCreak");
+    }
+
+    #[test]
+    fn parse_reads_the_envelope() {
+        let port = spawn_router(1, |line| {
+            assert_eq!(line, "POST /parse HTTP/1.1");
+            r#"{"schema_version":1,"slates":[{"description":"door creak","normalized_text":"door creak"}]}"#.to_string()
+        });
+
+        let slates = client_on(port)
+            .parse(&["door creak".to_string()])
+            .expect("parse");
+
+        assert_eq!(slates.len(), 1);
+        assert_eq!(slates[0].description, "door creak");
+    }
+
+    #[test]
+    fn taxonomy_search_encodes_the_query() {
+        let port = spawn_router(1, |line| {
+            assert_eq!(line, "GET /taxonomy/search?q=door%20creak&limit=5 HTTP/1.1");
+            r#"{"schema_version":1,"entries":[]}"#.to_string()
+        });
+
+        let entries = client_on(port)
+            .taxonomy_search("door creak", 5)
+            .expect("search");
+
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn taxonomy_entry_reads_one_entry() {
+        let port = spawn_router(1, |line| {
+            assert_eq!(line, "GET /taxonomy/DOORCreak HTTP/1.1");
+            r#"{"schema_version":1,"entry":{"cat_id":"DOORCreak","category":"DOOR","subcategory":"Creak","cat_short":"Creak"}}"#
+                .to_string()
+        });
+
+        let entry = client_on(port).taxonomy_entry("DOORCreak").expect("entry");
+
+        assert_eq!(entry.cat_id, "DOORCreak");
+    }
+
+    #[test]
+    fn shutdown_posts_an_empty_object() {
+        let port = spawn_router(1, |line| {
+            assert_eq!(line, "POST /shutdown HTTP/1.1");
+            "{}".to_string()
+        });
+
+        client_on(port).shutdown().expect("shutdown");
+    }
+
+    #[test]
+    fn a_schema_mismatch_is_reported() {
+        let port = spawn_router(1, |_| {
+            r#"{"schema_version":99,"status":"ok","warm":true,"ttucs_version":"0.3.0","ucs_version":"8.2.1","model":{"name":"bow","version":"0.2.0"},"offline":true,"unknown_threshold":0.4,"category_threshold":0.4}"#.to_string()
+        });
+
+        let err = client_on(port).health().expect_err("mismatch");
+
+        assert!(
+            matches!(err, EngineError::SchemaMismatch { .. }),
             "got {err:?}"
         );
     }

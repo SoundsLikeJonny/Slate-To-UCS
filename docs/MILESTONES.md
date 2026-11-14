@@ -115,7 +115,7 @@ PowerShell with `TTUCS_OFFLINE=1` and an empty `TTUCS_HOME`.
 | contract | `packages/contract/openapi.yaml` plus `gen/ts` and `gen/rust`, with the drift check wired into CI |
 | first crates | `slate-ucs` with `tests/conformance.rs` against `fixtures/golden/predictions.jsonl`; `slate-engine` with `endpoint.rs`, `launcher.rs`, `client.rs` |
 | CLI | `slate predict` and `slate doctor` over a real `ttucs serve` |
-| CI | `ci.yml` on `windows-2022`, `macos-14`, `ubuntu-22.04`; `nightly.yml`; `docs.yml` |
+| CI | `ci.yml` on `windows-2022`, `macos-latest`, `ubuntu-22.04`; `nightly.yml`; `docs.yml` |
 | docs | `CONTRIBUTING.md`, `CODEOWNERS`, `docs/index.md`, ADRs 0001–0006 |
 
 **Exit:** from a clean checkout on all three OSes, `just check && just test` passes and

@@ -197,4 +197,110 @@ mod tests {
 
         assert_eq!(parse(raw).expect("parsed").body, "partial");
     }
+
+    /// Serve one canned response on a loopback socket and return its port.
+    fn serve_once(response: &'static str) -> u16 {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+        let port = listener.local_addr().expect("addr").port();
+        std::thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut sink = [0u8; 1024];
+                let _ = stream.read(&mut sink);
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+        port
+    }
+
+    #[test]
+    fn request_round_trips_a_get() {
+        let port = serve_once("HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\n{\"ok\":true}");
+
+        let response = request(
+            "127.0.0.1",
+            port,
+            "GET",
+            "/health",
+            None,
+            None,
+            Duration::from_secs(5),
+        )
+        .expect("response");
+
+        assert_eq!(response.status, 200);
+        assert_eq!(response.body, "{\"ok\":true}");
+    }
+
+    #[test]
+    fn request_sends_the_token_and_body() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+        let port = listener.local_addr().expect("addr").port();
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut sink = [0u8; 2048];
+                let n = stream.read(&mut sink).unwrap_or(0);
+                let _ = tx.send(String::from_utf8_lossy(&sink[..n]).to_string());
+                let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}");
+            }
+        });
+
+        request(
+            "127.0.0.1",
+            port,
+            "POST",
+            "/predict",
+            Some("secret"),
+            Some("{\"texts\":[]}"),
+            Duration::from_secs(5),
+        )
+        .expect("response");
+
+        let sent = rx.recv_timeout(Duration::from_secs(5)).expect("request");
+        assert!(
+            sent.starts_with("POST /predict HTTP/1.1\r\n"),
+            "got {sent:?}"
+        );
+        assert!(sent.contains("X-Ttucs-Token: secret\r\n"), "got {sent:?}");
+        assert!(sent.contains("Content-Length: 12\r\n"), "got {sent:?}");
+        assert!(sent.ends_with("{\"texts\":[]}"), "got {sent:?}");
+    }
+
+    #[test]
+    fn request_reports_a_closed_port_as_transport() {
+        // Bind and drop so the port is almost certainly free.
+        let port = {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+            listener.local_addr().expect("addr").port()
+        };
+
+        let err = request(
+            "127.0.0.1",
+            port,
+            "GET",
+            "/health",
+            None,
+            None,
+            Duration::from_millis(250),
+        )
+        .expect_err("refused");
+
+        assert!(matches!(err, EngineError::Transport(_)), "got {err:?}");
+    }
+
+    #[test]
+    fn request_reports_an_unresolvable_host_as_transport() {
+        let err = request(
+            "no-such-host.invalid",
+            1,
+            "GET",
+            "/health",
+            None,
+            None,
+            Duration::from_millis(250),
+        )
+        .expect_err("unresolvable");
+
+        assert!(matches!(err, EngineError::Transport(_)), "got {err:?}");
+    }
 }

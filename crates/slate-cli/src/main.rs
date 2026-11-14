@@ -48,9 +48,57 @@ pub enum Command {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    let code = match cli.command {
-        Command::Predict(args) => cmd::predict::run(&args),
+    ExitCode::from(dispatch(&cli))
+}
+
+/// Run the parsed command and return its exit code.
+fn dispatch(cli: &Cli) -> u8 {
+    match &cli.command {
+        Command::Predict(args) => cmd::predict::run(args),
         Command::Doctor => cmd::doctor::run(),
-    };
-    ExitCode::from(code)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_predict_with_a_description() {
+        let cli = Cli::try_parse_from(["slate", "predict", "door creak"]).expect("parsed");
+
+        match cli.command {
+            Command::Predict(args) => assert_eq!(args.texts, vec!["door creak".to_string()]),
+            Command::Doctor => panic!("expected predict"),
+        }
+    }
+
+    #[test]
+    fn parses_doctor_without_arguments() {
+        let cli = Cli::try_parse_from(["slate", "doctor"]).expect("parsed");
+
+        assert!(matches!(cli.command, Command::Doctor));
+    }
+
+    #[test]
+    fn rejects_an_unknown_subcommand() {
+        let err = Cli::try_parse_from(["slate", "frobnicate"]).expect_err("rejected");
+
+        assert_eq!(err.kind(), clap::error::ErrorKind::InvalidSubcommand);
+    }
+
+    #[test]
+    fn rejects_a_missing_subcommand() {
+        let err = Cli::try_parse_from(["slate"]).expect_err("rejected");
+
+        assert_eq!(
+            err.kind(),
+            clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+        );
+    }
+
+    #[test]
+    fn exit_codes_are_distinct_and_documented() {
+        assert_eq!((EXIT_USER, EXIT_ENGINE, EXIT_PARTIAL), (1, 2, 3));
+    }
 }
