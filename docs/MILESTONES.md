@@ -148,9 +148,9 @@ The live run used `SLATE_TTUCS_BIN` pointing at the `ttucs` virtualenv executabl
 `TTUCS_HOME`, so `slate predict` spawned the server itself, read `serve.json`, predicted, and shut the
 server down. No `ttucs.exe` was left running and the endpoint file was removed.
 
-Every exit item is now met. The contract drift check is wired into `ci.yml` and has failed on real
-drift; it has not been observed failing on a deliberate edit, which is a gap in the evidence rather
-than in the check.
+Every exit item is now met. The contract drift check is wired into `ci.yml` and was observed failing
+on a deliberate edit locally: changing one CatID in row 4 of the corpus made
+`cargo xtask gen-golden --check` exit 1 and print that row with both versions.
 
 ### Risks
 
