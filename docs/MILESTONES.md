@@ -136,16 +136,21 @@ The scaffold landed ahead of the window, in one PR. Verified on Windows and in C
 | `cargo llvm-cov --workspace --fail-under-lines 85` | 86.44% lines |
 | `cargo deny check` | advisories, bans, licences and sources ok |
 | `python -m pytest tools/tests` | 19 tests pass against the pinned wheel |
-| CI `43563560134` on `6845983` | all eight jobs pass: rust on `windows-2022`, `macos-latest`, `ubuntu-22.04`, coverage, versions, docs, golden, supply chain |
+| `just check` / `just test` / `just test-unit` / `just coverage` | all exit 0; coverage 86.44% lines |
+| `slate predict` against a live `ttucs serve` | exit 0, correct predictions, server shut down and endpoint file removed |
+| CI `43563767951` on `2f9c6ab` | all eight jobs pass: rust on `windows-2022`, `macos-latest`, `ubuntu-22.04`, coverage, versions, docs, golden, supply chain |
 
 The golden corpus is pinned to the released `ttucs==0.3.0` wheel, not to a working checkout. It was
 first generated from an editable checkout that tracks `main`, which disagreed with the wheel on 35 of
 412 rows; `tools/gen_golden.py` now refuses an editable reference and CI installs the exact version.
 
-Still open against the exit criterion: `just` is not installed on the development machine so the
-`just check && just test` path is unexercised, and `slate predict` has not been driven against a live
-`ttucs serve`. The contract drift check is wired into `ci.yml` and has failed on real drift, but has
-not been observed failing on a deliberate edit.
+The live run used `SLATE_TTUCS_BIN` pointing at the `ttucs` virtualenv executable and a scratch
+`TTUCS_HOME`, so `slate predict` spawned the server itself, read `serve.json`, predicted, and shut the
+server down. No `ttucs.exe` was left running and the endpoint file was removed.
+
+Every exit item is now met. The contract drift check is wired into `ci.yml` and has failed on real
+drift; it has not been observed failing on a deliberate edit, which is a gap in the evidence rather
+than in the check.
 
 ### Risks
 
