@@ -10,7 +10,57 @@ use crate::repo_root;
 ///
 /// Returns a message listing every broken relative link.
 pub fn run(_args: &[String]) -> Result<(), String> {
-    check_in(&repo_root())
+    let root = repo_root();
+    check_in(&root)?;
+    check_summary(&root)
+}
+
+/// Check that `docs/SUMMARY.md` lists every document and nothing missing.
+///
+/// mdBook refuses to build without a `SUMMARY.md`, and a document missing from it is
+/// invisible on the published site even though it reads fine on GitHub. The `docs`
+/// workflow only runs on `main`, so a break here is not caught by a pull request
+/// unless this check catches it first.
+///
+/// # Errors
+///
+/// Returns a message listing every unlisted document and every dangling entry.
+pub fn check_summary(root: &Path) -> Result<(), String> {
+    let docs = root.join("docs");
+    let summary = docs.join("SUMMARY.md");
+    let text =
+        std::fs::read_to_string(&summary).map_err(|e| format!("{}: {e}", summary.display()))?;
+    let listed: Vec<PathBuf> = relative_links(&text)
+        .into_iter()
+        .map(|target| docs.join(target))
+        .collect();
+
+    let mut problems: Vec<String> = Vec::new();
+    for entry in &listed {
+        if !entry.exists() {
+            problems.push(format!(
+                "SUMMARY.md lists a missing file: {}",
+                entry.display()
+            ));
+        }
+    }
+    for file in markdown_files(&docs) {
+        if file.file_name().is_some_and(|name| name == "SUMMARY.md") {
+            continue;
+        }
+        if !listed.contains(&file) {
+            problems.push(format!(
+                "SUMMARY.md does not list {}",
+                file.strip_prefix(&docs).unwrap_or(&file).display()
+            ));
+        }
+    }
+    if problems.is_empty() {
+        println!("documentation summary lists {} documents", listed.len());
+        Ok(())
+    } else {
+        Err(problems.join("\n"))
+    }
 }
 
 /// Check every Markdown file under `root`, plus the root-level ones.
@@ -162,5 +212,60 @@ mod tests {
     #[test]
     fn the_repository_documentation_resolves() {
         assert!(check_in(&repo_root()).is_ok());
+    }
+
+    #[test]
+    fn the_repository_summary_lists_every_document() {
+        assert!(check_summary(&repo_root()).is_ok());
+    }
+
+    #[test]
+    fn a_summary_that_omits_a_document_is_reported() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let docs = dir.path().join("docs");
+        std::fs::create_dir_all(&docs).expect("mkdir");
+        std::fs::write(docs.join("SUMMARY.md"), "# Summary\n\n- [A](a.md)\n").expect("write");
+        std::fs::write(docs.join("a.md"), "# a\n").expect("write");
+        std::fs::write(docs.join("b.md"), "# b\n").expect("write");
+
+        let err = check_summary(dir.path()).expect_err("unlisted");
+
+        assert!(err.contains("does not list b.md"), "got {err}");
+        assert!(!err.contains("a.md"), "got {err}");
+    }
+
+    #[test]
+    fn a_summary_entry_with_no_file_is_reported() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let docs = dir.path().join("docs");
+        std::fs::create_dir_all(&docs).expect("mkdir");
+        std::fs::write(docs.join("SUMMARY.md"), "- [Gone](gone.md)\n").expect("write");
+
+        let err = check_summary(dir.path()).expect_err("dangling");
+
+        assert!(err.contains("lists a missing file"), "got {err}");
+        assert!(err.contains("gone.md"), "got {err}");
+    }
+
+    #[test]
+    fn a_missing_summary_is_an_error() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        std::fs::create_dir_all(dir.path().join("docs")).expect("mkdir");
+
+        let err = check_summary(dir.path()).expect_err("no summary");
+
+        assert!(err.contains("SUMMARY.md"), "got {err}");
+    }
+
+    #[test]
+    fn a_complete_summary_passes() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let docs = dir.path().join("docs");
+        std::fs::create_dir_all(docs.join("adr")).expect("mkdir");
+        std::fs::write(docs.join("SUMMARY.md"), "- [A](a.md)\n  - [D](adr/d.md)\n").expect("write");
+        std::fs::write(docs.join("a.md"), "# a\n").expect("write");
+        std::fs::write(docs.join("adr/d.md"), "# d\n").expect("write");
+
+        assert!(check_summary(dir.path()).is_ok());
     }
 }
