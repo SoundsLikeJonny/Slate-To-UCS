@@ -43,8 +43,8 @@ pub use client::{Client, DEFAULT_TIMEOUT};
 pub use endpoint::Endpoint;
 pub use error::EngineError;
 pub use launcher::{
-    default_endpoint_path, ttucs_binary, Engine, POLL_INTERVAL, STARTUP_TIMEOUT, TTUCS_BIN_ENV,
-    WARM_TIMEOUT,
+    default_endpoint_path, ttucs_binary, Engine, SpawnOptions, POLL_INTERVAL, STARTUP_TIMEOUT,
+    TTUCS_BIN_ENV, WARM_TIMEOUT,
 };
 pub use schema::{check_schema_version, SCHEMA_VERSION};
 pub use token::Token;

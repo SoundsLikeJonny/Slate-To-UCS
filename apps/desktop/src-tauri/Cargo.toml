@@ -1,0 +1,33 @@
+[package]
+name = "slate-desktop"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+license = "MIT"
+authors = ["Jon Evans"]
+repository = "https://github.com/SoundsLikeJonny/Slate-To-UCS"
+publish = false
+description = "The Slate-To-UCS desktop window"
+
+# Deliberately outside the root workspace: a WebView build on three CI runners would
+# slow every Rust job and needs GTK headers on Linux. Testable logic lives in
+# `crates/slate-shell`; this crate is the window and the IPC surface only.
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+slate-engine = { path = "../../../crates/slate-engine" }
+slate-shell = { path = "../../../crates/slate-shell" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
+unwrap_used = "warn"
+expect_used = "warn"

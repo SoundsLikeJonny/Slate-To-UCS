@@ -4,14 +4,19 @@ members = [
     "crates/slate-audio",
     "crates/slate-ucs",
     "crates/slate-engine",
+    "crates/slate-shell",
     "crates/slate-cli",
     "tools/xtask",
 ]
+# The Tauri binary is built by `cargo tauri build`, not by the workspace: compiling a
+# WebView on three CI runners would slow every Rust job and needs GTK headers on Linux.
+# Its testable logic lives in `crates/slate-shell`.
+exclude = ["apps/desktop/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.89"
 license = "MIT"
 authors = ["Jon Evans"]
 repository = "https://github.com/SoundsLikeJonny/Slate-To-UCS"

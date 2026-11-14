@@ -79,6 +79,22 @@ jobs:
       - name: links resolve
         run: cargo xtask docs-check
 
+  shell:
+    name: desktop shell compiles
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+      - name: check
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: deny
+        run: |
+          cargo install cargo-deny --locked
+          cargo deny --manifest-path apps/desktop/src-tauri/Cargo.toml check
+
   golden:
     name: golden corpus is current
     runs-on: ubuntu-22.04

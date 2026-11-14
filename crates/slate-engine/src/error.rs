@@ -69,3 +69,99 @@ pub enum EngineError {
     #[error("transport error: {0}")]
     Transport(String),
 }
+
+impl EngineError {
+    /// A stable, machine-readable name for this failure.
+    ///
+    /// The desktop front end branches on this string, so it is part of the IPC
+    /// contract: renaming a variant must not silently rename a kind. The values match
+    /// `apps/desktop/src/lib/engine.ts`.
+    #[must_use]
+    pub fn kind(&self) -> &'static str {
+        match self {
+            Self::NotInstalled(_) => "not_installed",
+            Self::StartupTimeout(_) => "startup_timeout",
+            Self::WarmTimeout(_) => "warm_timeout",
+            Self::Unhealthy(_) => "unhealthy",
+            Self::Unauthorised => "unauthorised",
+            Self::SchemaMismatch { .. } => "schema_mismatch",
+            Self::RequestTooLarge(_) => "request_too_large",
+            Self::EndpointFile { .. } => "endpoint_file",
+            Self::Status { .. } => "status",
+            Self::Malformed(_) => "malformed",
+            Self::Transport(_) => "transport",
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_variant_has_a_distinct_kind() {
+        let variants = [
+            EngineError::NotInstalled("x".to_string()),
+            EngineError::StartupTimeout(1),
+            EngineError::WarmTimeout(1),
+            EngineError::Unhealthy("x".to_string()),
+            EngineError::Unauthorised,
+            EngineError::SchemaMismatch {
+                found: 2,
+                expected: 1,
+            },
+            EngineError::RequestTooLarge("x".to_string()),
+            EngineError::EndpointFile {
+                path: "p".to_string(),
+                reason: "r".to_string(),
+            },
+            EngineError::Status {
+                status: 500,
+                path: "/predict".to_string(),
+                body: "x".to_string(),
+            },
+            EngineError::Malformed("x".to_string()),
+            EngineError::Transport("x".to_string()),
+        ];
+
+        let mut kinds: Vec<&str> = variants.iter().map(EngineError::kind).collect();
+        let total = kinds.len();
+        kinds.sort_unstable();
+        kinds.dedup();
+
+        assert_eq!(kinds.len(), total, "two variants share a kind: {kinds:?}");
+    }
+
+    #[test]
+    fn kinds_are_lower_snake_case() {
+        let kinds = [
+            EngineError::NotInstalled(String::new()).kind(),
+            EngineError::Unauthorised.kind(),
+            EngineError::SchemaMismatch {
+                found: 1,
+                expected: 1,
+            }
+            .kind(),
+        ];
+
+        for kind in kinds {
+            assert!(
+                kind.chars().all(|c| c.is_ascii_lowercase() || c == '_'),
+                "{kind} is not lower snake case"
+            );
+        }
+    }
+
+    #[test]
+    fn the_kind_is_stable_for_the_front_end() {
+        assert_eq!(EngineError::Unauthorised.kind(), "unauthorised");
+        assert_eq!(
+            EngineError::SchemaMismatch {
+                found: 2,
+                expected: 1
+            }
+            .kind(),
+            "schema_mismatch"
+        );
+    }
+}

@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `crates/slate-shell`: the desktop logic that needs no window. `InstanceGuard` takes an
+  advisory OS file lock so a second launch exits instead of opening a second window, and a
+  crashed process cannot leave a stale lock behind. `Sidecar` resolves the bundled `ttucs`
+  onedir tree, reports whether it is installed, and builds spawn options that set
+  `TTUCS_OFFLINE=1` on the child only.
+- `slate-engine`: `SpawnOptions` and `Engine::spawn_with_options`, so a caller can pass an
+  environment to the server without mutating its own process environment. `spawn_with` is now
+  a thin wrapper over it.
+- `apps/desktop/src-tauri`: the Tauri 2 window, its capabilities file and the `health` and
+  `predict` commands. The engine token stays in Rust and never crosses the IPC boundary.
 - `apps/desktop`: the React and TypeScript shell. A two-route hash router, a resizable split
   pane whose width is remembered per viewport bucket and falls back to memory when the webview
   refuses `localStorage`, an error boundary whose report strips absolute paths and token-shaped
@@ -110,6 +120,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `just changelog X.Y.Z` assembles the release section.
 
 ### Changed
+- The workspace minimum Rust version is 1.89, because `InstanceGuard` uses the stabilised
+  `File::try_lock` rather than a pid file or a third-party lock crate.
 - `docs/PLAN.md` revision 2 supersedes revision 1 on four points, following the owner's decisions
   recorded in the handover brief: the engine is `ttucs serve` (Python standard library
   `ThreadingHTTPServer`) rather than a Rust daemon; the desktop UI is React rather than Svelte; the

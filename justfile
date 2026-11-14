@@ -16,7 +16,7 @@ setup:
 
 # ---------------------------------------------------------------- checks
 
-check: check-fmt check-clippy check-docs check-versions check-changelog check-ui
+check: check-fmt check-clippy check-docs check-versions check-changelog check-shell check-ui
 
 check-fmt:
     cargo fmt --all --check
@@ -35,6 +35,10 @@ check-versions:
 
 check-changelog:
     cargo xtask changelog --check
+
+# The Tauri crate is outside the workspace (ADR-0007), so it needs its own check.
+check-shell:
+    cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 
 # ---------------------------------------------------------------- tests
 
