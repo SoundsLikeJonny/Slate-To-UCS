@@ -53,8 +53,13 @@ trap 'rm -rf "$work"' EXIT INT TERM
 mkdir -p "$work/BUILD" "$work/BUILDROOT" "$work/RPMS" "$work/SOURCES" "$work/SPECS" "$work/SRPMS"
 sh "$here/stage.sh" "$work/payload" $stage_args >/dev/null
 
-# The tarball's top directory must match %setup -q, which expects name-version.
-tar -C "$work/payload" -czf "$work/SOURCES/slate-to-ucs-$version.tar.gz" usr
+# The tarball's top directory must match %setup -q, which expects name-version. The
+# staged payload is a bare `usr` tree, so it is copied under that name first; archiving
+# `usr` directly leaves %setup looking for a directory that is not there.
+stage="$work/stage/slate-to-ucs-$version"
+mkdir -p "$stage"
+cp -R "$work/payload/usr" "$stage/usr"
+tar -C "$work/stage" -czf "$work/SOURCES/slate-to-ucs-$version.tar.gz" "slate-to-ucs-$version"
 
 sed -e "s/@VERSION@/$version/g" -e "s/@ARCH@/$arch/g" \
     "$here/slate.spec.in" > "$work/SPECS/slate-to-ucs.spec"

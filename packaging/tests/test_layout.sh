@@ -139,5 +139,26 @@ else
     fail "spec lost a substitution placeholder"
 fi
 
+# %setup -q unpacks a directory named name-version, so the tarball must have exactly that
+# top directory. Archiving the bare `usr` tree satisfies tar and fails rpmbuild's %prep
+# with "can't cd to slate-to-ucs-<version>", which is a long way from the cause.
+printf 'rpm source tarball\n'
+rpm_script="$here/../linux/build-rpm.sh"
+if grep -q 'slate-to-ucs-%\{version\}\.tar\.gz' "$spec"; then
+    ok "spec Source0 is name-version"
+else
+    fail "spec Source0 is not name-version"
+fi
+if grep -qE 'tar .*-czf .*"slate-to-ucs-\$version"' "$rpm_script"; then
+    ok "rpm tarball archives a name-version top directory"
+else
+    fail "rpm tarball does not archive a name-version top directory"
+fi
+if grep -q '^%setup -q' "$spec"; then
+    ok "spec uses %setup -q"
+else
+    fail "spec does not use %setup -q"
+fi
+
 printf '\n%d checks, %d failures\n' "$checks" "$failures"
 [ "$failures" -eq 0 ]
