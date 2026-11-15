@@ -60,6 +60,25 @@ for script in "$here"/../linux/*.sh "$here"/../macos/*.sh "$0"; do
     if sh -n "$script" 2>/dev/null; then ok "sh -n $name"; else fail "sh -n $name"; fi
 done
 
+# `sh -n` only parses, so it cannot catch a bashism that expands at run time. Brace
+# expansion is the one that bit: `mkdir -p "$work"/{A,B}` under dash creates a single
+# directory literally named `{A,B}`, and the failure surfaces much later as a missing
+# path. These scripts run under `sh`, so brace expansion is never available to them.
+printf 'posix sh only\n'
+for script in "$here"/../linux/*.sh "$here"/../macos/*.sh; do
+    name=$(basename "$script")
+    if grep -nE '(mkdir|cp|rm|ls|install|tar)[^|;]*\{[^}]*,[^}]*\}' "$script" >/dev/null 2>&1; then
+        fail "brace expansion in $name (dash does not expand it)"
+    else
+        ok "no brace expansion in $name"
+    fi
+    if grep -nE '(^|[;&|(]|if |elif |while |until )[[:space:]]*\[\[ |^[[:space:]]*local |^[[:space:]]*function ' "$script" >/dev/null 2>&1; then
+        fail "bash-only syntax in $name"
+    else
+        ok "no bash-only syntax in $name"
+    fi
+done
+
 printf 'staging\n'
 sh "$here/../linux/stage.sh" "$work/tree" --slate "$slate_bin" >/dev/null
 expect_file "$work/tree/usr/bin/slate" "usr/bin/slate"

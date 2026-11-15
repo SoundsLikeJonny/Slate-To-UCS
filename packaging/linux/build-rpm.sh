@@ -50,7 +50,7 @@ esac
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT INT TERM
 
-mkdir -p "$work"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+mkdir -p "$work/BUILD" "$work/BUILDROOT" "$work/RPMS" "$work/SOURCES" "$work/SPECS" "$work/SRPMS"
 sh "$here/stage.sh" "$work/payload" $stage_args >/dev/null
 
 # The tarball's top directory must match %setup -q, which expects name-version.
