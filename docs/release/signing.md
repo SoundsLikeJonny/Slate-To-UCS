@@ -79,7 +79,10 @@ Options that cost nothing, in the order worth trying:
    the licence, and they issue and custody the certificate; CI submits the artefact and
    gets it back signed. This is the only zero-cost route to a *trusted* Authenticode
    signature. Trade-offs: discretionary approval taking weeks, and the key is theirs, so
-   offline signing is impossible.
+   offline signing is impossible. **Ruled out on 2026-11-15:** their eligibility criteria
+   expect an established project with a public following, which this one does not yet have.
+   Revisit if the project grows enough to qualify; nothing in the pipeline would have to
+   change except the signing step.
 2. **Certum open-source certificate.** Historically free to OSS developers. Since the 2023
    CA/Browser Forum rules every OV/EV key must live in an HSM or a vendor cloud service, so
    the certificate may be free while the signing token or subscription is not. Worth a
@@ -100,11 +103,17 @@ macOS notarisation has no free path. Gatekeeper refuses a quarantined unsigned a
 user must right-click-Open every time, so the $99/year is unavoidable if macOS distribution
 matters.
 
-The decision recorded here is: apply to SignPath Foundation, and until it is approved ship
-unsigned with cosign, SBOM, provenance and a published checksum. Keep the
-`AZURE_SIGNING_ENABLED` gate as it is, so moving to Azure later is a secret and a variable
-rather than a rewrite. Revisit when downloads reach the hundreds, which is roughly when
-SmartScreen reputation starts to matter.
+The decision recorded here is: ship unsigned with cosign, SBOM, provenance and a published
+checksum, because the only zero-cost trusted route is closed to a project this young. Keep
+the `AZURE_SIGNING_ENABLED` gate as it is, so moving to Azure later is a secret and a
+variable rather than a rewrite.
+
+The cheapest paid route to a *trusted* Windows signature is the $19 one-time Microsoft Store
+developer account, because Store packages are signed by Microsoft and skip SmartScreen
+entirely. It is not free and it changes the distribution model, so it is a decision to take
+deliberately rather than a default. Azure Artifact Signing at $9.99/month becomes worth it
+when downloads reach the hundreds, which is roughly when SmartScreen reputation starts to
+matter and when a publisher name in the UAC prompt stops being cosmetic.
 
 ## Key custody
 
