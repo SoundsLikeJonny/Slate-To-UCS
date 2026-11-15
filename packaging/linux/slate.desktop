@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Slate-To-UCS
+GenericName=Sound effect labeller
+Comment=Label sound effects with UCS metadata
+Exec=slate
+Icon=slate
+Terminal=false
+Categories=AudioVideo;Audio;Utility;
+Keywords=sound;sfx;ucs;metadata;audio;
+StartupNotify=true
+StartupWMClass=slate

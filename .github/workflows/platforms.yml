@@ -1,0 +1,117 @@
+name: platforms
+
+# The macOS and Linux artefacts, and the install paths that only a real machine can prove.
+# Windows packaging lives in build.yml and release.yml; this workflow is the other two
+# platforms, plus the layout test that runs anywhere.
+#
+# Nothing here is signed. The DMG step signs only when SLATE_SIGN_IDENTITY is present, and
+# notarisation needs an Apple ID and an app-specific password that do not exist yet, so the
+# unsigned path is what runs and the signed path is what is written.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platforms-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  layout:
+    name: packaging layout
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release -p slate-cli
+      - name: layout and script syntax
+        run: sh packaging/tests/test_layout.sh
+
+  linux:
+    name: linux packages (ubuntu-22.04)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            dpkg-dev rpm appstream fakeroot zstd squashfs-tools
+      - run: cargo build --release -p slate-cli
+      - name: build the deb
+        run: sh packaging/linux/build-deb.sh
+      - name: build the rpm
+        run: sh packaging/linux/build-rpm.sh
+      - name: build the AppImage payload
+        run: sh packaging/linux/build-appimage.sh
+      - name: validate the AppStream metadata
+        run: appstreamcli validate --no-net packaging/linux/io.github.soundslikejonny.SlateToUCS.metainfo.xml
+      - name: inspect the deb
+        run: |
+          deb=$(ls packaging/linux/out/*.deb)
+          dpkg-deb -I "$deb"
+          dpkg-deb -c "$deb" | grep -q 'usr/bin/slate'
+          dpkg-deb -c "$deb" | grep -q 'usr/share/applications/slate.desktop'
+      - name: inspect the rpm
+        run: |
+          rpm=$(ls packaging/linux/out/*.rpm)
+          rpm -qip "$rpm"
+          rpm -qlp "$rpm" | grep -q '/usr/bin/slate'
+      - name: install, run and remove the deb
+        run: |
+          deb=$(ls packaging/linux/out/*.deb)
+          sudo dpkg -i "$deb"
+          slate --version
+          test -f /usr/share/applications/slate.desktop
+          sudo dpkg -r slate-to-ucs
+          if [ -e /usr/bin/slate ]; then
+            echo "slate survived the removal" >&2
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: |
+            packaging/linux/out/*.deb
+            packaging/linux/out/*.rpm
+            packaging/linux/out/*.AppImage
+          if-no-files-found: error
+
+  macos:
+    name: macos dmg (macos-latest)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release -p slate-cli
+      - name: build the dmg
+        run: sh packaging/macos/build-dmg.sh
+      - name: verify the image
+        run: |
+          dmg=$(ls packaging/macos/out/*.dmg)
+          hdiutil verify "$dmg"
+      - name: mount, assert the bundle and unmount
+        run: |
+          dmg=$(ls packaging/macos/out/*.dmg)
+          mountpoint=$(mktemp -d)
+          hdiutil attach "$dmg" -mountpoint "$mountpoint" -nobrowse -quiet
+          trap 'hdiutil detach "$mountpoint" -quiet || true' EXIT
+          test -x "$mountpoint/Slate-To-UCS.app/Contents/MacOS/slate"
+          test -f "$mountpoint/Slate-To-UCS.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' \
+            "$mountpoint/Slate-To-UCS.app/Contents/Info.plist" | grep -qx 'io.github.soundslikejonny.SlateToUCS'
+          "$mountpoint/Slate-To-UCS.app/Contents/MacOS/slate" --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: packaging/macos/out/*.dmg
+          if-no-files-found: error
