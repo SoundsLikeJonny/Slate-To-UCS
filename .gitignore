@@ -17,8 +17,7 @@ eggs/
 # Root-anchored: an unanchored `lib/` also matches source directories such as
 # `apps/desktop/src/lib/`, which silently kept the TypeScript client out of git.
 /lib/
-/lib64/
-parts/
+/lib64/parts/
 sdist/
 var/
 wheels/
@@ -243,6 +242,8 @@ target/
 node_modules/
 .pnpm-store/
 apps/desktop/dist/
+# mdBook output from `mdbook build docs`, produced by the docs workflow.
+docs/book/
 packages/contract/gen/
 
 # Tauri
