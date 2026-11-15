@@ -144,11 +144,15 @@ fi
 # with "can't cd to slate-to-ucs-<version>", which is a long way from the cause.
 printf 'rpm source tarball\n'
 rpm_script="$here/../linux/build-rpm.sh"
-if grep -q 'slate-to-ucs-%\{version\}\.tar\.gz' "$spec"; then
-    ok "spec Source0 is name-version"
-else
-    fail "spec Source0 is not name-version"
-fi
+# Compared with `case`, not grep: a quoted case pattern is an exact string match, so it
+# needs no escaping and cannot be reinterpreted as a BRE interval or mangled by the
+# argument layer. `grep -F '%{version}'` matches nothing under Git for Windows even
+# though the bytes are present, which is exactly the kind of false failure to avoid.
+source0=$(sed -n 's/^Source0:[[:space:]]*//p' "$spec" | head -1)
+case "$source0" in
+    'slate-to-ucs-%{version}.tar.gz') ok "spec Source0 is name-version" ;;
+    *) fail "spec Source0 is '$source0', not name-version" ;;
+esac
 if grep -qE 'tar .*-czf .*"slate-to-ucs-\$version"' "$rpm_script"; then
     ok "rpm tarball archives a name-version top directory"
 else
