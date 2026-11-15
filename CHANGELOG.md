@@ -7,13 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `docs/release/signing.md`: SignPath Foundation is ruled out. Its eligibility criteria
+  expect an established project with a public following, which this one does not have yet,
+  so the only zero-cost route to a trusted Authenticode signature is closed. The recorded
+  decision is now to ship unsigned with cosign, SBOM, provenance and a published checksum,
+  with the $19 one-time Microsoft Store developer account named as the cheapest paid route
+  to a trusted signature and Azure Artifact Signing deferred until downloads reach the
+  hundreds. Nothing in the pipeline changes: the `AZURE_SIGNING_ENABLED` gate stays, so a
+  later move is a secret and a variable rather than a rewrite.
+
 ### Added
 - `docs/release/signing.md`: a cost table for the signing setup (about $220/year across
   Azure Artifact Signing and the Apple Developer Program) and the five zero-cost
-  alternatives, with the trade-off of each. Records the decision to apply to SignPath
-  Foundation and ship unsigned with cosign, SBOM, provenance and a published checksum until
-  it is approved, keeping the `AZURE_SIGNING_ENABLED` gate so a later move to Azure is a
-  secret and a variable rather than a rewrite.
+  alternatives, with the trade-off of each, keeping the `AZURE_SIGNING_ENABLED` gate so a
+  later move to Azure is a secret and a variable rather than a rewrite.
 - `apps/desktop/src/lib/queue.ts`: the review queue as pure functions. Rows sort by confidence
   ascending with a total order so a re-render never reshuffles equal rows, the six filter chips
   count themselves, an override keeps the classifier's original guess beside it, and predict
