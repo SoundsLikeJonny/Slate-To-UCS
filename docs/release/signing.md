@@ -60,6 +60,52 @@ SmartScreen reputation accrues with download volume on an OV certificate; it is 
 instant and it is not a defect. An EV certificate would skip the accrual and is not worth
 the cost for this project.
 
+## Cost and the free alternatives
+
+| item | cost | what it buys |
+|---|---|---|
+| Azure Artifact Signing | $9.99/month, about $120/year | Authenticode on the MSI and the NSIS exe, trusted publisher name in UAC and SmartScreen |
+| Apple Developer Program | $99/year | the only route to notarisation and a stapled DMG |
+| total | about $220/year | |
+
+The Azure tier's signature quota is far above this project's volume, so the fee is a flat
+platform charge rather than a per-signature cost. The real gate is identity validation: an
+individual must be in the US or Canada, and an organisation needs a verifiable
+registration.
+
+Options that cost nothing, in the order worth trying:
+
+1. **SignPath Foundation.** Free code signing for open-source projects. Apply, they verify
+   the licence, and they issue and custody the certificate; CI submits the artefact and
+   gets it back signed. This is the only zero-cost route to a *trusted* Authenticode
+   signature. Trade-offs: discretionary approval taking weeks, and the key is theirs, so
+   offline signing is impossible.
+2. **Certum open-source certificate.** Historically free to OSS developers. Since the 2023
+   CA/Browser Forum rules every OV/EV key must live in an HSM or a vendor cloud service, so
+   the certificate may be free while the signing token or subscription is not. Worth a
+   quote, not worth assuming zero.
+3. **Self-signed certificate.** Free and buys nothing public: the root is not in the trust
+   store, so Windows shows "Unknown publisher" exactly as it does unsigned. Useful only for
+   a GPO-managed fleet.
+4. **Stay unsigned, prove integrity instead.** The release already carries an SBOM, a
+   cosign signature and GitHub build provenance. Adding a published SHA-256 per artefact and
+   a `cosign verify` line in the README lets a user prove the download is the build that was
+   made. What it does not give is a publisher name in the UAC prompt or SmartScreen
+   reputation.
+5. **MSIX through the Microsoft Store.** A $19 one-time individual developer account.
+   Store-distributed packages are signed by Microsoft and do not trigger SmartScreen, at the
+   cost of MSIX packaging, Store review, and losing the plain `.exe` download.
+
+macOS notarisation has no free path. Gatekeeper refuses a quarantined unsigned app and the
+user must right-click-Open every time, so the $99/year is unavoidable if macOS distribution
+matters.
+
+The decision recorded here is: apply to SignPath Foundation, and until it is approved ship
+unsigned with cosign, SBOM, provenance and a published checksum. Keep the
+`AZURE_SIGNING_ENABLED` gate as it is, so moving to Azure later is a secret and a variable
+rather than a rewrite. Revisit when downloads reach the hundreds, which is roughly when
+SmartScreen reputation starts to matter.
+
 ## Key custody
 
 - No key material in the repository, in Actions secrets, or on a developer machine.

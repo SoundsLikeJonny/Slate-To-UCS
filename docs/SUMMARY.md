@@ -13,6 +13,11 @@
 - [CODE_STYLE.md](CODE_STYLE.md)
 - [TESTING.md](TESTING.md)
 
+# Release
+
+- [signing.md](release/signing.md)
+- [runbook.md](release/runbook.md)
+
 # Decisions
 
 - [0001 — One consumer repository](adr/0001-one-consumer-repo.md)

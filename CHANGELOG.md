@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `docs/release/signing.md`: a cost table for the signing setup (about $220/year across
+  Azure Artifact Signing and the Apple Developer Program) and the five zero-cost
+  alternatives, with the trade-off of each. Records the decision to apply to SignPath
+  Foundation and ship unsigned with cosign, SBOM, provenance and a published checksum until
+  it is approved, keeping the `AZURE_SIGNING_ENABLED` gate so a later move to Azure is a
+  secret and a variable rather than a rewrite.
 - `apps/desktop/src/lib/queue.ts`: the review queue as pure functions. Rows sort by confidence
   ascending with a total order so a re-render never reshuffles equal rows, the six filter chips
   count themselves, an override keeps the classifier's original guess beside it, and predict
@@ -23,6 +29,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   editable file name with live validation, keywords, and a keyboard-first CatID override whose
   search ranks CatID prefix over substring over subcategory over category.
 - `apps/desktop/src/app/ExportPanel.tsx`: the column preview and the CSV and JSONL buttons.
+- `packaging/linux/stage.sh`: the one staging function the deb, the rpm and the AppImage all
+  consume, so three packagers cannot disagree about where a file lives and leave three
+  uninstallers each removing part of another's work.
+- `packaging/linux/build-deb.sh`, `build-rpm.sh`, `build-appimage.sh`: the three Linux
+  packages. The Debian and RPM architectures are probed from the ELF header rather than from
+  the host, so a cross-built package is labelled correctly.
+- `packaging/linux/slate.desktop` and `io.github.soundslikejonny.SlateToUCS.metainfo.xml`:
+  desktop entry and AppStream metadata, validated with `appstreamcli` in CI.
+- `packaging/macos/build-dmg.sh` and `entitlements.plist`: signs innermost-first, builds the
+  DMG with `hdiutil`, and notarises and staples when `--notarise` is given. The entitlements
+  deliberately omit the network-client entitlement, because the engine is on loopback and
+  that entitlement would also permit outbound traffic.
+- `packaging/windows/smoke-install.ps1`: silent install, upgrade and uninstall against a real
+  MSI, asserting the payload, the single Add/Remove Programs entry and the absence of
+  residue. Refuses to run unelevated rather than reporting a misleading pass.
+- `packaging/tests/test_layout.sh`: 34 checks over the staging tree, the desktop entry, the
+  AppStream metadata, the spec template and every script's syntax. Needs no packager, so it
+  runs on any host with a shell.
+- `.github/workflows/platforms.yml`: a layout job, a Linux job that builds all three packages
+  and installs, runs and removes the deb on a real runner, and a macOS job that verifies,
+  mounts and asserts the DMG.
+- `packaging/windows/slate.wxs` and `build-msi.ps1`: the per-machine MSI. A fixed
+  `UpgradeCode` with a generated `ProductCode`, a `MajorUpgrade` that refuses a downgrade,
+  ICE validation on, and the REAPER extension and Lua scripts installed beside the app
+  rather than into a user profile. The sidecar is harvested with `heat` when `-SidecarDir`
+  is given, so an MSI can be built and smoke-tested before the sidecar exists.
+- `packaging/windows/slate.nsi` and `build-nsis.ps1`: the NSIS installer, with the same
+  install layout and Add/Remove Programs name as the MSI, and a downgrade check that reads
+  the version the previous install recorded.
+- `.github/workflows/build.yml`: tag-triggered build of the CLI, the extension, the UI and
+  both installers, then signing, signature verification, an SPDX SBOM, build provenance
+  and an upload to a draft release. Signing is skipped rather than faked when
+  `AZURE_SIGNING_ENABLED` is absent, and the artefacts are renamed `-unsigned` so they
+  cannot be mistaken for signed ones.
+- `.github/workflows/sign-verify.yml`: verifies a tag's artefacts, and on a pull request
+  builds an MSI that is unsigned by construction and asserts the check rejects it, so the
+  check is proven able to fail.
+- `.github/workflows/release.yml`: refuses an unsigned or untimestamped artefact, installs
+  silently, asserts the nine installed files and `slate --version`, uninstalls silently,
+  asserts no residue in the install directory, the Start Menu or Add/Remove Programs, then
+  publishes behind a reviewer-gated `release` environment.
+- `docs/release/signing.md` and `docs/release/runbook.md`: the signing identity, why the
+  RFC 3161 timestamp is not optional, the custody rules, the ordered release steps and the
+  rollback path.
+- `packaging/README.md` and `docs/LAYOUT.md` §15: how to build both installers and the four
+  rules that keep them consistent.
+- `apps/desktop/src/lib/settings.ts`: the settings model, its defaults and its validation. Every
+  field is validated on the way in and falls back to its default with a recorded problem rather
+  than throwing, so a hand-edited or truncated settings file cannot stop the app from starting.
+  Unknown keys are ignored, because a file written by a newer build must still load.
+- `apps/desktop/src/lib/telemetry.ts`: the payload, built from numbers and closed enums only, with
+  `containsUserData` to prove that no transcript, filename, path or CatID can appear in any field.
+  `DO_NOT_TRACK=1` always wins, then `SLATE_TELEMETRY=0`, then `SLATE_TELEMETRY=1`, then the stored
+  setting. `PAYLOAD_FIELDS` is the "what is sent" panel, and a test asserts it describes every field
+  of a built payload.
+- `apps/desktop/src/lib/keyboard.ts`: the binding table and a pure resolver. `j`/`k`, `Enter`, `e`,
+  `c`, `o`, `Space` and `Cmd/Ctrl+E`, with a text field winning over every binding except the
+  command-key export. Every action carries the label its button shows, so the keyboard and the mouse
+  cannot drift apart.
+- `apps/desktop/src/lib/repredict.ts`: re-predicting only the rows whose transcript changed, in
+  batches of 32. A test asserts one request for one edited row in a 200-row queue and a wall time
+  under 200 ms.
+- `crates/slate-audio`: `Cancellable`, a child process handle that kills and reaps on drop, so a
+  cancelled transcription leaves no orphan. `slate transcribe` now runs Whisper through it.
+- `crates/slate-tagger`: rename planning, journalling and undo. `plan_renames` refuses an
+  overwrite, a duplicate source, two entries claiming one name, a name with a forbidden
+  character, a reserved Windows device name, a trailing space or dot, an over-long name and a
+  subfolder unless the caller opts in. `apply` writes the journal before the first rename and
+  rewrites it after each one, so a crash leaves a journal listing exactly what moved. `undo`
+  replays it in reverse and counts an entry whose file is already back as already restored, so
+  running it twice is safe.
+- `slate tag <dir> --names <plan.jsonl> [--apply] [--undo <journal>] [--json]`: a dry run by
+  default, exit 1 when any entry is blocked. The journal records an absolute directory, so an
+  undo works from any working directory.
 - `crates/slate-shell`: the desktop logic that needs no window. `InstanceGuard` takes an
   advisory OS file lock so a second launch exits instead of opening a second window, and a
   crashed process cannot leave a stale lock behind. `Sidecar` resolves the bundled `ttucs`
