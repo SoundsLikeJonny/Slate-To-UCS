@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `packaging/linux/stage.sh`: the one staging function the deb, the rpm and the AppImage all
+  consume, so three packagers cannot disagree about where a file lives and leave three
+  uninstallers each removing part of another's work.
+- `packaging/linux/build-deb.sh`, `build-rpm.sh`, `build-appimage.sh`: the three Linux
+  packages. The Debian and RPM architectures are probed from the ELF header rather than from
+  the host, so a cross-built package is labelled correctly.
+- `packaging/linux/slate.desktop` and `io.github.soundslikejonny.SlateToUCS.metainfo.xml`:
+  desktop entry and AppStream metadata, validated with `appstreamcli` in CI.
+- `packaging/macos/build-dmg.sh` and `entitlements.plist`: signs innermost-first, builds the
+  DMG with `hdiutil`, and notarises and staples when `--notarise` is given. The entitlements
+  deliberately omit the network-client entitlement, because the engine is on loopback and
+  that entitlement would also permit outbound traffic.
+- `packaging/windows/smoke-install.ps1`: silent install, upgrade and uninstall against a real
+  MSI, asserting the payload, the single Add/Remove Programs entry and the absence of
+  residue. Refuses to run unelevated rather than reporting a misleading pass.
+- `packaging/tests/test_layout.sh`: 34 checks over the staging tree, the desktop entry, the
+  AppStream metadata, the spec template and every script's syntax. Needs no packager, so it
+  runs on any host with a shell.
+- `.github/workflows/platforms.yml`: a layout job, a Linux job that builds all three packages
+  and installs, runs and removes the deb on a real runner, and a macOS job that verifies,
+  mounts and asserts the DMG.
 - `packaging/windows/slate.wxs` and `build-msi.ps1`: the per-machine MSI. A fixed
   `UpgradeCode` with a generated `ProductCode`, a `MajorUpgrade` that refuses a downgrade,
   ICE validation on, and the REAPER extension and Lua scripts installed beside the app

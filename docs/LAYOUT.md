@@ -427,7 +427,20 @@ directory.
 | `windows/build-nsis.ps1` | tool | 7 | Compiles the NSIS installer with makensis. |
 | `windows/licence.rtf` | gen | 7 | The licence page, generated from `LICENSE`. |
 | `windows/out/` | out | 7 | Build output, ignored by git. |
-| `README.md` | doc | 7 | How to build both installers, and the four rules that keep them consistent. |
+| `windows/smoke-install.ps1` | tool | 8 | Silent install, upgrade and uninstall against a real MSI, asserting the payload, the Add/Remove Programs entry and the absence of residue. Needs elevation. |
+| `macos/build-dmg.sh` | tool | 8 | Stages or accepts a `.app`, signs innermost-first, builds the DMG with `hdiutil`, and optionally notarises and staples it. |
+| `macos/entitlements.plist` | cfg | 8 | Hardened-runtime entitlements. Deliberately minimal: no network-client entitlement, because the engine is on loopback. |
+| `macos/out/` | out | 8 | Build output, ignored by git. |
+| `linux/stage.sh` | tool | 8 | The one staging function the deb, the rpm and the AppImage all consume. |
+| `linux/build-deb.sh` | tool | 8 | `dpkg-deb` package, architecture probed from the ELF header rather than the host. |
+| `linux/build-rpm.sh` | tool | 8 | `rpmbuild` package from a generated spec. |
+| `linux/build-appimage.sh` | tool | 8 | AppImage with `AppRun`, the desktop file and the icon at the root. |
+| `linux/slate.desktop` | cfg | 8 | Desktop entry, `Exec=slate`. |
+| `linux/io.github.soundslikejonny.SlateToUCS.metainfo.xml` | cfg | 8 | AppStream metadata, validated with `appstreamcli`. |
+| `linux/slate.spec.in` | cfg | 8 | RPM spec template with `@VERSION@` and `@ARCH@` placeholders. |
+| `linux/out/` | out | 8 | Build output, ignored by git. |
+| `tests/test_layout.sh` | test | 8 | Asserts the staging tree, the desktop entry, the AppStream metadata, the spec template and every script's syntax. Runs on any host with a shell. |
+| `README.md` | doc | 7 | How to build every installer, and the four rules that keep them consistent. |
 
 `docs/release/` holds the procedure: `signing.md` for the identity, the timestamp and the
 custody rules, `runbook.md` for the ordered steps from version bump to published release.

@@ -1,0 +1,40 @@
+Name:           slate-to-ucs
+Version:        @VERSION@
+Release:        1%{?dist}
+Summary:        Label sound effects with UCS metadata
+License:        MIT
+URL:            https://github.com/SoundsLikeJonny/Slate-To-UCS
+Source0:        slate-to-ucs-%{version}.tar.gz
+BuildArch:      @ARCH@
+Requires:       glibc
+
+%description
+Slate-To-UCS reads a sound effect, transcribes any spoken slate and suggests
+Universal Category System metadata for it: category, subcategory, CatID,
+keywords and a UCS file name.
+
+Everything runs locally. The classifier is served on loopback and offline mode
+is the default, so no audio, transcript or file name leaves the machine.
+
+%prep
+%setup -q
+
+%build
+# Nothing to build: the payload is the staged tree, produced by stage.sh.
+
+%install
+mkdir -p %{buildroot}
+cp -R usr %{buildroot}/
+
+%files
+/usr/bin/slate
+/usr/lib/slate
+/usr/share/applications/slate.desktop
+/usr/share/metainfo/io.github.soundslikejonny.SlateToUCS.metainfo.xml
+/usr/share/icons/hicolor/256x256/apps/slate.png
+/usr/share/doc/slate/LICENSE
+/usr/share/doc/slate/README.md
+
+%changelog
+* Sat Nov 14 2026 Jon Evans <jonnythejet@gmail.com> - @VERSION@-1
+- First packaged release.

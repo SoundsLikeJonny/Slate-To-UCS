@@ -430,8 +430,8 @@ version and uninstall all pass on a clean VM with no residue.
 | `release.yml` | done: refuses an unsigned artefact, silent install, layout assertion, `slate --version`, silent uninstall, residue assertion, then a reviewer-gated publish |
 | `docs/release/signing.md`, `runbook.md` | done |
 | install smoke tests on clean runners | written, never run: the workflow needs a signed draft release to exist |
-| upgrade over the previous version | not written: there is no published previous version to upgrade from |
-| DMG, notarisation, deb/rpm/AppImage | not started: phase 8 |
+| upgrade over the previous version | written in `packaging/windows/smoke-install.ps1`, never run: needs elevation and a second, higher-version MSI |
+| DMG, notarisation, deb/rpm/AppImage | done: `packaging/macos/build-dmg.sh` and the three `packaging/linux/` packagers, with `platforms.yml` installing and removing the deb on a real runner |
 
 Verified locally: the MSI decompiles with `dark.exe` to nine payload files, and the embedded
 `slate.exe` is byte-identical to `target/release/slate.exe`
