@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ReaPack index template for Slate-To-UCS.
+
+  `reapack.yml` fills {{VERSION}} and {{BASE_URL}} and pushes the result to the `reapack`
+  branch, which is what a user adds in ReaPack's import dialog. The template lives here so
+  the file list is reviewed in the same diff as the scripts it describes.
+-->
+<index version="1" name="Slate-To-UCS">
+  <metadata>
+    <link rel="website" href="https://github.com/SoundsLikeJonny/Slate-To-UCS" />
+  </metadata>
+  <category name="Slate-To-UCS">
+    <reapack name="slate_tag_selected.lua" type="script" version="{{VERSION}}">
+      <desc><![CDATA[Tag the selected media items with UCS metadata. One undo step for the whole selection.]]></desc>
+      <source platform="all" file="slate_tag_selected.lua">{{BASE_URL}}/slate_tag_selected.lua</source>
+    </reapack>
+    <reapack name="slate_tag_project.lua" type="script" version="{{VERSION}}">
+      <desc><![CDATA[Tag every media item in the project, with a progress window and Escape to cancel.]]></desc>
+      <source platform="all" file="slate_tag_project.lua">{{BASE_URL}}/slate_tag_project.lua</source>
+    </reapack>
+    <reapack name="slate_render_pattern.lua" type="script" version="{{VERSION}}">
+      <desc><![CDATA[Set the project render filename pattern from the UCS creator and source fields.]]></desc>
+      <source platform="all" file="slate_render_pattern.lua">{{BASE_URL}}/slate_render_pattern.lua</source>
+    </reapack>
+    <reapack name="slate_open_app.lua" type="script" version="{{VERSION}}">
+      <desc><![CDATA[Open the Slate-To-UCS desktop app from REAPER.]]></desc>
+      <source platform="all" file="slate_open_app.lua">{{BASE_URL}}/slate_open_app.lua</source>
+    </reapack>
+    <reapack name="lib/slate_api.lua" type="script" version="{{VERSION}}">
+      <desc><![CDATA[Shared helper for the Slate-To-UCS scripts. Installed automatically as a dependency.]]></desc>
+      <source platform="all" file="lib/slate_api.lua">{{BASE_URL}}/lib/slate_api.lua</source>
+    </reapack>
+  </category>
+</index>

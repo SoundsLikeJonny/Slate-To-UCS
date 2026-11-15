@@ -1,0 +1,78 @@
+name: reapack
+
+# Publishes the ReaScripts to the `reapack` branch, which is the URL a user adds in
+# ReaPack's import dialog. Runs on a tag so the index version always matches a release,
+# and on demand so the index can be rebuilt without cutting one.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: reapack
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish the ReaPack index
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: resolve the version
+        id: version
+        run: |
+          set -eu
+          version="$(sed -n 's/^version *= *"\(.*\)"/\1/p' version.toml | head -1)"
+          if [ -z "$version" ]; then
+            echo "version.toml has no version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: fill the index template
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BASE_URL: https://raw.githubusercontent.com/${{ github.repository }}/reapack
+        run: |
+          set -eu
+          mkdir -p dist
+          sed -e "s|{{VERSION}}|${VERSION}|g" \
+              -e "s|{{BASE_URL}}|${BASE_URL}|g" \
+              apps/reaper/scripts/index.xml.tmpl > dist/index.xml
+          # The scripts are published flat next to the index, so a source URL resolves
+          # without a second directory level.
+          cp apps/reaper/scripts/*.lua dist/
+          mkdir -p dist/lib
+          cp apps/reaper/scripts/lib/*.lua dist/lib/
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          tree = ET.parse("dist/index.xml")
+          sources = tree.findall(".//source")
+          if not sources:
+              raise SystemExit("the index has no sources")
+          for source in sources:
+              if "{{" in (source.text or ""):
+                  raise SystemExit(f"unfilled placeholder in {source.text}")
+          print(f"index has {len(sources)} sources")
+          PY
+
+      - name: push to the reapack branch
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -eu
+          cd dist
+          git init -q -b reapack
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "reapack: publish ${VERSION}"
+          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" reapack

@@ -409,7 +409,38 @@ These are enforced by review and, where possible, by CI.
 | a new REAPER action | `apps/reaper/extension/src/actions.cpp`, plus a Lua wrapper if it is user-facing |
 | a new CLI command | `crates/slate-cli/src/cmd/`, registered in `cmd/mod.rs`, plus a `tests/cli.rs` case |
 | a new build or release step | `tools/xtask/src/`, exposed as a `just` recipe |
+| a new installer or packaging input | `packaging/windows/`, plus a row in `packaging/README.md` |
 | a new decision | `docs/adr/NNNN-<slug>.md`, and a row in `PLAN.md` §11 |
 
 Anything that does not fit one of these rows is a design question for the owner, not a new
 directory.
+
+---
+
+## 15. `packaging/` — installers
+
+| file | kind | phase | function |
+|---|---|---|---|
+| `windows/slate.wxs` | cfg | 7 | WiX 3.14 source for the per-machine MSI. Fixed `UpgradeCode`, generated `ProductCode`, `MajorUpgrade` that refuses a downgrade. |
+| `windows/build-msi.ps1` | tool | 7 | Compiles and links the MSI with candle and light. Reads the version from `version.toml`, harvests the sidecar with `heat` when `-SidecarDir` is given. |
+| `windows/slate.nsi` | cfg | 7 | NSIS source for the `.exe` installer. Same layout and Add/Remove Programs name as the MSI. |
+| `windows/build-nsis.ps1` | tool | 7 | Compiles the NSIS installer with makensis. |
+| `windows/licence.rtf` | gen | 7 | The licence page, generated from `LICENSE`. |
+| `windows/out/` | out | 7 | Build output, ignored by git. |
+| `windows/smoke-install.ps1` | tool | 8 | Silent install, upgrade and uninstall against a real MSI, asserting the payload, the Add/Remove Programs entry and the absence of residue. Needs elevation. |
+| `macos/build-dmg.sh` | tool | 8 | Stages or accepts a `.app`, signs innermost-first, builds the DMG with `hdiutil`, and optionally notarises and staples it. |
+| `macos/entitlements.plist` | cfg | 8 | Hardened-runtime entitlements. Deliberately minimal: no network-client entitlement, because the engine is on loopback. |
+| `macos/out/` | out | 8 | Build output, ignored by git. |
+| `linux/stage.sh` | tool | 8 | The one staging function the deb, the rpm and the AppImage all consume. |
+| `linux/build-deb.sh` | tool | 8 | `dpkg-deb` package, architecture probed from the ELF header rather than the host. |
+| `linux/build-rpm.sh` | tool | 8 | `rpmbuild` package from a generated spec. |
+| `linux/build-appimage.sh` | tool | 8 | AppImage with `AppRun`, the desktop file and the icon at the root. |
+| `linux/slate.desktop` | cfg | 8 | Desktop entry, `Exec=slate`. |
+| `linux/io.github.soundslikejonny.SlateToUCS.metainfo.xml` | cfg | 8 | AppStream metadata, validated with `appstreamcli`. |
+| `linux/slate.spec.in` | cfg | 8 | RPM spec template with `@VERSION@` and `@ARCH@` placeholders. |
+| `linux/out/` | out | 8 | Build output, ignored by git. |
+| `tests/test_layout.sh` | test | 8 | Asserts the staging tree, the desktop entry, the AppStream metadata, the spec template and every script's syntax. Runs on any host with a shell. |
+| `README.md` | doc | 7 | How to build every installer, and the four rules that keep them consistent. |
+
+`docs/release/` holds the procedure: `signing.md` for the identity, the timestamp and the
+custody rules, `runbook.md` for the ordered steps from version bump to published release.

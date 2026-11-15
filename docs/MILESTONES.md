@@ -266,6 +266,24 @@ match.
 **Exit:** editing a transcript re-predicts in under 200 ms on a 200-row queue; the telemetry payload
 test asserts no transcript, filename, path or CatID appears in any field.
 
+#### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| re-predict | done: `rePredictChanged` sends one request for the changed rows in batches of 32; a test asserts one request and under 200 ms on a 200-row queue |
+| cancellation | done: `slate_audio::Cancellable` kills and reaps on drop; tests assert the process is reaped, that a second cancel is harmless, and that a dropped handle kills the child before it can write its marker file |
+| keyboard | done: `keyboard.ts` binding table and resolver, with a test that the table covers every action and that a text field wins over every binding except the export chord |
+| settings | done: `settings.ts` with per-field validation, defaults, unknown-key tolerance and round-trip persistence |
+| telemetry | done: allowlisted payload, `containsUserData` leak check, `DO_NOT_TRACK` and `SLATE_TELEMETRY` precedence, "what is sent" field list |
+| transcript editor UI | not started: the modules are in place, the panel is not |
+
+Verified locally: `cargo test --workspace` 367 tests plus doctests, `cargo clippy --workspace
+--all-targets -- -D warnings` clean, `cargo fmt --all --check` clean, `pnpm --dir apps/desktop test`
+235 tests, `pnpm --dir apps/desktop typecheck` clean.
+
+The 200 ms figure is measured against a stub client, so it proves the request count and the
+scheduling, not the engine's latency. The real number needs a warm engine on the owner's machine.
+
 ### Week 6 (12-21 → 12-27): rename
 
 | goal | detail |
@@ -278,6 +296,24 @@ test asserts no transcript, filename, path or CatID appears in any field.
 
 **Exit:** a dry run on a copy of a real folder, then apply, then undo, leaves every filename
 byte-identical to the start and no leftover temp files.
+
+### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| dry run | done: two-column old → new, with `skip` and a sentence per blocked entry; exit 1 when anything is blocked |
+| safety | done: never overwrites, refuses subfolders unless `allow_subfolders`, refuses `..`, single atomic rename per file |
+| journal | done: `slate-undo-<timestamp>.json`, written before the first rename and rewritten after each one, absolute directory, version gate on read |
+| undo | done: reverse order, byte-identical restore, idempotent, refuses when the original name is occupied |
+| CLI | done: `slate tag <dir> --names <plan> [--apply] [--undo <journal>] [--json]` |
+
+Verified locally: `cargo test --workspace` 293 tests plus doctests, `cargo clippy --workspace
+--all-targets -- -D warnings` clean, `cargo fmt --all --check` clean. A smoke run on a scratch
+folder renamed two files, journalled both, then restored them with `sha256sum -c` passing.
+
+The desired names come from a plan file, not from the engine: `slate tag` does not yet predict a
+name from a transcript, so the CLI is proven but the end-to-end path from audio to renamed file is
+not. Week 5 (transcript editor, cancellation, keyboard, settings, telemetry) is not started.
 
 ### Risks
 
@@ -306,6 +342,31 @@ Phases 5 and 6. The milestone that makes the product worth having for a recordis
 **Exit:** 20 selected items tagged in a real session; notes correct and pre-existing text preserved;
 one undo step reverts the batch; no frame stall over ~50 ms measured with REAPER's own timer.
 
+#### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| SDK | done: `cargo xtask fetch-reaper-sdk` downloads both headers at pinned SHA-256 values, refuses a mismatch, writes a licence note, and the directory is gitignored |
+| build | done on Windows: `CMakeLists.txt` produces `slate_reaper.dll`; `SLATE_BUILD_EXTENSION=OFF` builds only the tests, which need no SDK |
+| entry | done: `ReaperPluginEntry` registers `SLATE_CHECK_ENGINE` and `SLATE_OPEN_APP` plus a `hookcommand` hook |
+| threading | done: worker thread owns the socket, lock-free SPSC queue, `timer` callback drains it and records its own duration |
+| launcher | partial: attach is implemented and checks `schema_version`; spawn is deliberately delegated to `slate doctor` rather than reimplemented in C++ |
+| actions | partial: check engine and open app are wired; tag selected, tag project and render pattern are not |
+| writes | partial: `merge_notes` and `UndoBlock` are implemented and tested; the item-write path that calls them is not |
+| failure | done: every failure path reports through the console and returns, never throwing into the host |
+
+Verified locally on Windows with MSVC 14.44: `cmake --build --config Release` exit 0,
+`slate_reaper.dll` 78,336 bytes, `slate_reaper_tests` 69 checks with 0 failures, `ctest` 1/1 passed.
+
+The exit criterion is not met: no real REAPER session has run this, so the 20-item tag, the
+single undo step and the 50 ms stall measurement are unproven. The stall budget is instrumented
+(`API_Slate_LastDrainMs`) but has never been read from a live session.
+
+Only Windows builds the loadable library. On macOS and Linux `reaper_plugin.h` includes
+`../WDL/swell/swell.h`, and WDL is not published at a URL that can be pinned, so those platforms
+build and run the unit tests with `-DSLATE_BUILD_EXTENSION=OFF` instead. A Unix `.so` or `.dylib`
+needs the full SDK placed beside the fetched headers.
+
 ### Week 8 (01-04 → 01-10): scripts
 
 | goal | detail |
@@ -318,6 +379,25 @@ one undo step reverts the batch; no frame stall over ~50 ms measured with REAPER
 
 **Exit:** scripts install via ReaPack and work with the extension present and absent; the app's
 **Install REAPER integration** action is reversible.
+
+#### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| `API_Slate_*` | done: `API_Slate_Predict` added beside `Health`, `LastDrainMs` and `SchemaVersion` |
+| scripts | done: tag selected, tag project with a gfx progress window and Escape to cancel, render pattern, open app |
+| fallback | done: `lib/slate_api.lua` calls `slate predict --json` when the extension is absent, and a test asserts the command line it builds |
+| ReaPack | done: `index.xml.tmpl` plus `reapack.yml`, which fills the template and pushes to the `reapack` branch on a tag |
+| install | done: `cargo xtask reaper-install` detects the per-user and portable resource directories, copies, and writes a manifest; `--uninstall` removes only what the manifest lists |
+
+Verified locally: `lua apps/reaper/scripts/tests/slate_api_test.lua` 60 checks, 0 failures;
+`cargo test -p xtask` 75 passed; `cargo test --workspace` 402 passed plus doctests; clippy and fmt
+clean; `slate_reaper.dll` still builds and its 69 checks pass; an install into a scratch directory
+wrote 5 scripts plus the manifest and `--uninstall` removed all 6, leaving nothing behind.
+
+The exit criterion is not met: no REAPER session has loaded the scripts, so "works with the
+extension present and absent" is proven against a stand-in REAPER table rather than the real host,
+and ReaPack has never fetched the index because no tag has been pushed.
 
 ### Risks
 
@@ -338,6 +418,33 @@ Phases 7 and 8, outside the eight-week window, listed for planning only.
 
 **Exit:** `signtool verify /pa` passes on a downloaded MSI; silent install, upgrade over the previous
 version and uninstall all pass on a clean VM with no residue.
+
+#### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| WiX MSI | done: `packaging/windows/slate.wxs` builds `Slate-To-UCS-0.1.0-x64.msi` at 897,024 bytes with ICE validation on |
+| NSIS exe | done: `packaging/windows/slate.nsi` builds `Slate-To-UCS-0.1.0-x64-setup.exe` at 502,359 bytes |
+| Azure Artifact Signing | wired in `build.yml` through `signCommand`-equivalent `azure/trusted-signing-action`, gated on `AZURE_SIGNING_ENABLED`; never exercised, because no account exists |
+| `sign-verify.yml` | done: verifies a tag's artefacts, and on a pull request asserts the check rejects an unsigned MSI |
+| `release.yml` | done: refuses an unsigned artefact, silent install, layout assertion, `slate --version`, silent uninstall, residue assertion, then a reviewer-gated publish |
+| `docs/release/signing.md`, `runbook.md` | done |
+| install smoke tests on clean runners | written, never run: the workflow needs a signed draft release to exist |
+| upgrade over the previous version | written in `packaging/windows/smoke-install.ps1`, never run: needs elevation and a second, higher-version MSI |
+| DMG, notarisation, deb/rpm/AppImage | done: `packaging/macos/build-dmg.sh` and the three `packaging/linux/` packagers, with `platforms.yml` installing and removing the deb on a real runner |
+
+Verified locally: the MSI decompiles with `dark.exe` to nine payload files, and the embedded
+`slate.exe` is byte-identical to `target/release/slate.exe`
+(`862488621f4f9b067b234a8c48c11acdea61c002452dc836b4935a55905b3e83`); the product carries
+`Version="0.1.0"`, the fixed `UpgradeCode` and a generated `ProductCode`. Both installers
+build from `version.toml` with no hand-typed version.
+
+The exit criterion is not met. No MSI has been signed, because no Azure Artifact Signing
+account exists, so `signtool verify /pa` has never passed on a downloaded MSI. The silent
+install, upgrade and uninstall assertions have never run: `msiexec /a` and the NSIS
+installer both require elevation, which this development session does not have, so the
+smoke test is written for the elevated `windows-2022` runner and is unproven until it runs
+there.
 
 ---
 

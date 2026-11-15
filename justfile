@@ -40,6 +40,38 @@ check-changelog:
 check-shell:
     cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 
+# The extension needs the SDK headers and cmake, so it is a separate recipe rather than
+# part of `check`: a contributor without either can still run everything else.
+check-reaper:
+    cargo xtask fetch-reaper-sdk
+    cmake -S apps/reaper/extension -B apps/reaper/extension/build
+    cmake --build apps/reaper/extension/build --config Release
+    ctest --test-dir apps/reaper/extension/build --output-on-failure -C Release
+
+# The pure-logic tests need no SDK, so this runs anywhere cmake does.
+test-reaper:
+    cargo xtask fetch-reaper-sdk
+    cmake -S apps/reaper/extension -B apps/reaper/extension/build -DSLATE_BUILD_EXTENSION=OFF
+    cmake --build apps/reaper/extension/build --config Release
+    ctest --test-dir apps/reaper/extension/build --output-on-failure -C Release
+
+# Both installers. Needs WIX_BIN and MAKENSIS; see packaging/README.md.
+package:
+    cargo build --release -p slate-cli
+    pwsh packaging/windows/build-msi.ps1
+    pwsh packaging/windows/build-nsis.ps1
+
+# The Lua scripts are tested without REAPER, so this needs only a Lua 5.4 interpreter.
+test-scripts:
+    lua apps/reaper/scripts/tests/slate_api_test.lua
+
+# Install or remove the scripts in REAPER's resource directory, reversibly.
+reaper-install:
+    cargo xtask reaper-install
+
+reaper-uninstall:
+    cargo xtask reaper-install --uninstall
+
 # ---------------------------------------------------------------- tests
 
 test:

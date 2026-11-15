@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hardened-runtime entitlements for the app bundle.
+
+  Deliberately minimal. The app needs no network client entitlement because the engine is
+  on loopback and `com.apple.security.network.client` would also permit outbound traffic,
+  which the offline guarantee forbids. It needs no file access entitlement because the
+  owner picks files through the open panel, which grants access per selection.
+
+  `disable-library-validation` is required because the sidecar is a separately built
+  binary loaded from the bundle; without it the hardened runtime refuses to load it.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <false/>
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <false/>
+</dict>
+</plist>

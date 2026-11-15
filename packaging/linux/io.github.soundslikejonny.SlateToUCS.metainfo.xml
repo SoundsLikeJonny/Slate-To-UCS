@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AppStream metadata, so a software centre can show the app without scraping the desktop
+  file. `appstreamcli validate` is run in CI; a release without this file is invisible in
+  GNOME Software and KDE Discover.
+-->
+<component type="desktop-application">
+  <id>io.github.soundslikejonny.SlateToUCS</id>
+  <name>Slate-To-UCS</name>
+  <summary>Label sound effects with UCS metadata</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="io.github.soundslikejonny">
+    <name>Jon Evans</name>
+  </developer>
+  <description>
+    <p>
+      Slate-To-UCS reads a sound effect, transcribes any spoken slate, and suggests the
+      Universal Category System metadata for it: category, subcategory, CatID, keywords
+      and a UCS file name.
+    </p>
+    <p>
+      Everything runs locally. The classifier is a local model served on loopback, and
+      offline mode is the default, so no audio, transcript or file name leaves the machine.
+    </p>
+  </description>
+  <launchable type="desktop-id">slate.desktop</launchable>
+  <url type="homepage">https://github.com/SoundsLikeJonny/Slate-To-UCS</url>
+  <url type="bugtracker">https://github.com/SoundsLikeJonny/Slate-To-UCS/issues</url>
+  <provides>
+    <binary>slate</binary>
+  </provides>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+    <category>Utility</category>
+  </categories>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="0.1.0" date="2026-11-14">
+      <description>
+        <p>First packaged release: the CLI, the desktop shell and the REAPER integration.</p>
+      </description>
+    </release>
+  </releases>
+</component>

@@ -609,9 +609,11 @@ name = "slate-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "serde",
  "serde_json",
  "slate-audio",
  "slate-engine",
+ "slate-tagger",
  "tempfile",
  "thiserror",
 ]
@@ -627,10 +629,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "slate-shell"
+name = "slate-tagger"
 version = "0.1.0"
 dependencies = [
- "slate-engine",
+ "serde",
+ "serde_json",
  "tempfile",
  "thiserror",
 ]

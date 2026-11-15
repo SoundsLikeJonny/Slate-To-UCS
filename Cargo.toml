@@ -4,7 +4,7 @@ members = [
     "crates/slate-audio",
     "crates/slate-ucs",
     "crates/slate-engine",
-    "crates/slate-shell",
+    "crates/slate-tagger",
     "crates/slate-cli",
     "tools/xtask",
 ]
