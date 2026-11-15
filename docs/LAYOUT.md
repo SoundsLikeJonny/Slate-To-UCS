@@ -409,7 +409,25 @@ These are enforced by review and, where possible, by CI.
 | a new REAPER action | `apps/reaper/extension/src/actions.cpp`, plus a Lua wrapper if it is user-facing |
 | a new CLI command | `crates/slate-cli/src/cmd/`, registered in `cmd/mod.rs`, plus a `tests/cli.rs` case |
 | a new build or release step | `tools/xtask/src/`, exposed as a `just` recipe |
+| a new installer or packaging input | `packaging/windows/`, plus a row in `packaging/README.md` |
 | a new decision | `docs/adr/NNNN-<slug>.md`, and a row in `PLAN.md` §11 |
 
 Anything that does not fit one of these rows is a design question for the owner, not a new
 directory.
+
+---
+
+## 15. `packaging/` — installers
+
+| file | kind | phase | function |
+|---|---|---|---|
+| `windows/slate.wxs` | cfg | 7 | WiX 3.14 source for the per-machine MSI. Fixed `UpgradeCode`, generated `ProductCode`, `MajorUpgrade` that refuses a downgrade. |
+| `windows/build-msi.ps1` | tool | 7 | Compiles and links the MSI with candle and light. Reads the version from `version.toml`, harvests the sidecar with `heat` when `-SidecarDir` is given. |
+| `windows/slate.nsi` | cfg | 7 | NSIS source for the `.exe` installer. Same layout and Add/Remove Programs name as the MSI. |
+| `windows/build-nsis.ps1` | tool | 7 | Compiles the NSIS installer with makensis. |
+| `windows/licence.rtf` | gen | 7 | The licence page, generated from `LICENSE`. |
+| `windows/out/` | out | 7 | Build output, ignored by git. |
+| `README.md` | doc | 7 | How to build both installers, and the four rules that keep them consistent. |
+
+`docs/release/` holds the procedure: `signing.md` for the identity, the timestamp and the
+custody rules, `runbook.md` for the ordered steps from version bump to published release.

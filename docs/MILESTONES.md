@@ -419,6 +419,33 @@ Phases 7 and 8, outside the eight-week window, listed for planning only.
 **Exit:** `signtool verify /pa` passes on a downloaded MSI; silent install, upgrade over the previous
 version and uninstall all pass on a clean VM with no residue.
 
+#### Status (2026-11-14)
+
+| item | state |
+|---|---|
+| WiX MSI | done: `packaging/windows/slate.wxs` builds `Slate-To-UCS-0.1.0-x64.msi` at 897,024 bytes with ICE validation on |
+| NSIS exe | done: `packaging/windows/slate.nsi` builds `Slate-To-UCS-0.1.0-x64-setup.exe` at 502,359 bytes |
+| Azure Artifact Signing | wired in `build.yml` through `signCommand`-equivalent `azure/trusted-signing-action`, gated on `AZURE_SIGNING_ENABLED`; never exercised, because no account exists |
+| `sign-verify.yml` | done: verifies a tag's artefacts, and on a pull request asserts the check rejects an unsigned MSI |
+| `release.yml` | done: refuses an unsigned artefact, silent install, layout assertion, `slate --version`, silent uninstall, residue assertion, then a reviewer-gated publish |
+| `docs/release/signing.md`, `runbook.md` | done |
+| install smoke tests on clean runners | written, never run: the workflow needs a signed draft release to exist |
+| upgrade over the previous version | not written: there is no published previous version to upgrade from |
+| DMG, notarisation, deb/rpm/AppImage | not started: phase 8 |
+
+Verified locally: the MSI decompiles with `dark.exe` to nine payload files, and the embedded
+`slate.exe` is byte-identical to `target/release/slate.exe`
+(`862488621f4f9b067b234a8c48c11acdea61c002452dc836b4935a55905b3e83`); the product carries
+`Version="0.1.0"`, the fixed `UpgradeCode` and a generated `ProductCode`. Both installers
+build from `version.toml` with no hand-typed version.
+
+The exit criterion is not met. No MSI has been signed, because no Azure Artifact Signing
+account exists, so `signtool verify /pa` has never passed on a downloaded MSI. The silent
+install, upgrade and uninstall assertions have never run: `msiexec /a` and the NSIS
+installer both require elevation, which this development session does not have, so the
+smoke test is written for the elevated `windows-2022` runner and is unproven until it runs
+there.
+
 ---
 
 ## 10. Decision deadlines

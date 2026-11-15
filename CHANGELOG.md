@@ -8,42 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `apps/reaper/scripts/lib/slate_api.lua`: one code path per action for every ReaScript. The
-  extension's `API_Slate_*` exports when it is loaded, `slate` on the command line when it is
-  not, and the same table shape either way. It carries a JSON decoder written out rather than
-  pulled from luarocks, because ReaScript ships no JSON module and a recordist's machine has no
-  package manager. `null` decodes to a sentinel rather than `nil`, since a `nil` in a Lua array
-  truncates it and shifts every later index.
-- `apps/reaper/scripts/`: `slate_tag_selected.lua`, `slate_tag_project.lua` (gfx progress window,
-  Escape to cancel), `slate_render_pattern.lua` and `slate_open_app.lua`, plus
-  `index.xml.tmpl` for ReaPack.
-- `apps/reaper/scripts/tests/slate_api_test.lua`: 60 checks over the decoder, the identifier
-  rules, notes merging, the render pattern, both predict paths, tagging, the undo block and
-  cancellation. Plain Lua with no framework, so `lua` alone runs it.
-- `crates/slate-reaper` export `API_Slate_Predict`: returns the prediction JSON for one
-  description, valid until the next call on the same thread, which is what REAPER's Lua binding
-  needs.
-- `cargo xtask reaper-install`: detects `%APPDATA%\REAPER`, the macOS Application Support path,
-  `XDG_CONFIG_HOME` and portable installs via `reaper.ini`, copies the scripts, and writes a
-  manifest of exactly what it wrote. `--uninstall` removes only those files, so a user's own
-  script in the same directory survives.
-- `.github/workflows/reapack.yml`: fills the index template and pushes it to the `reapack`
-  branch on a tag.
-- `apps/desktop/src/lib/queue.ts`: the review queue as pure functions. Rows sort by confidence
-  ascending with a total order so a re-render never reshuffles equal rows, the six filter chips
-  count themselves, an override keeps the classifier's original guess beside it, and predict
-  calls batch at 32 texts.
-- `apps/desktop/src/lib/filename.ts`: UCS file names built, parsed from the right so an
-  underscore inside the effect name survives, and validated as the user types, including a
-  CatID check against the loaded taxonomy.
-- `apps/desktop/src/lib/export.ts`: RFC 4180 CSV and JSONL over a fixed column set, so two
-  exports of the same queue are byte-identical, plus the column preview shown above the buttons.
-- `apps/desktop/src/app/Queue.tsx`: the drop zone, the filter chips and a virtualised table that
-  renders only the scroll window plus an overscan, so a 200-file drop stays responsive.
-- `apps/desktop/src/app/Inspector.tsx`: transcript, ranked alternatives, decision badge, an
-  editable file name with live validation, keywords, and a keyboard-first CatID override whose
-  search ranks CatID prefix over substring over subcategory over category.
-- `apps/desktop/src/app/ExportPanel.tsx`: the column preview and the CSV and JSONL buttons.
+- `packaging/windows/slate.wxs` and `build-msi.ps1`: the per-machine MSI. A fixed
+  `UpgradeCode` with a generated `ProductCode`, a `MajorUpgrade` that refuses a downgrade,
+  ICE validation on, and the REAPER extension and Lua scripts installed beside the app
+  rather than into a user profile. The sidecar is harvested with `heat` when `-SidecarDir`
+  is given, so an MSI can be built and smoke-tested before the sidecar exists.
+- `packaging/windows/slate.nsi` and `build-nsis.ps1`: the NSIS installer, with the same
+  install layout and Add/Remove Programs name as the MSI, and a downgrade check that reads
+  the version the previous install recorded.
+- `.github/workflows/build.yml`: tag-triggered build of the CLI, the extension, the UI and
+  both installers, then signing, signature verification, an SPDX SBOM, build provenance
+  and an upload to a draft release. Signing is skipped rather than faked when
+  `AZURE_SIGNING_ENABLED` is absent, and the artefacts are renamed `-unsigned` so they
+  cannot be mistaken for signed ones.
+- `.github/workflows/sign-verify.yml`: verifies a tag's artefacts, and on a pull request
+  builds an MSI that is unsigned by construction and asserts the check rejects it, so the
+  check is proven able to fail.
+- `.github/workflows/release.yml`: refuses an unsigned or untimestamped artefact, installs
+  silently, asserts the nine installed files and `slate --version`, uninstalls silently,
+  asserts no residue in the install directory, the Start Menu or Add/Remove Programs, then
+  publishes behind a reviewer-gated `release` environment.
+- `docs/release/signing.md` and `docs/release/runbook.md`: the signing identity, why the
+  RFC 3161 timestamp is not optional, the custody rules, the ordered release steps and the
+  rollback path.
+- `packaging/README.md` and `docs/LAYOUT.md` §15: how to build both installers and the four
+  rules that keep them consistent.
 - `apps/desktop/src/lib/settings.ts`: the settings model, its defaults and its validation. Every
   field is validated on the way in and falls back to its default with a recorded problem rather
   than throwing, so a hand-edited or truncated settings file cannot stop the app from starting.
